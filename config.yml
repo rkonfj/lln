@@ -1,0 +1,5 @@
+listen: 127.0.0.1:8876
+oidc:
+- provider: google
+  clientID: xxx
+  clientSecret: xxx
