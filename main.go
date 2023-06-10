@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
 )
@@ -8,7 +10,7 @@ import (
 func main() {
 	cmd := &cobra.Command{
 		Use:     "lln",
-		Short:   "A twitterlike http api server",
+		Short:   "A twitterlike api server",
 		Args:    cobra.NoArgs,
 		PreRunE: initAction,
 		RunE:    startAction,
@@ -27,15 +29,16 @@ func initAction(cmd *cobra.Command, args []string) error {
 
 func startAction(cmd *cobra.Command, args []string) error {
 	r := gin.Default()
-	r.POST("/authorize/:provider", authorize)
-	r.GET("/authorize/:provider", authorizeRedirect)
-	r.GET("/:name", profile)
-	r.GET("/:name/status", userStatus)
-	r.GET("/:name/status/:id", status)
+	r.POST(fmt.Sprintf("/authorize/:%s", Provider), authorize)
+	r.POST(fmt.Sprintf("/like/status/:%s", StatusID), likeStatus)
+	r.POST(fmt.Sprintf("/like/user/:%s", UniqueName), likeUser)
+
+	r.GET(fmt.Sprintf("/authorize/:%s", Provider), authorizeRedirect)
+	r.GET(fmt.Sprintf("/:%s", UniqueName), profile)
+	r.GET(fmt.Sprintf("/:%s/status", UniqueName), userStatus)
+	r.GET(fmt.Sprintf("/:%s/status/:%s", UniqueName, StatusID), status)
 	r.GET("/explore", explore)
 	r.GET("/labels", labels)
-	r.POST("/like/status/:id", likeStatus)
-	r.POST("/like/user/:name", likeUser)
 
 	return r.Run(config.Listen)
 }
