@@ -20,7 +20,7 @@ func authorize(c *gin.Context) {
 	}
 	oauth2Token, err := provider.Config.Exchange(context.Background(), c.Query("code"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, err)
+		c.JSON(http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -35,7 +35,7 @@ func authorize(c *gin.Context) {
 	idToken, err := provider.Provider.Verifier(&oidc.Config{ClientID: provider.Config.ClientID}).
 		Verify(context.Background(), rawIDToken)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, err)
+		c.JSON(http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -52,7 +52,7 @@ func authorize(c *gin.Context) {
 	}
 	sessionObj, err := session.Create(claims.Email, claims.Name, claims.Picture)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, err)
+		c.JSON(http.StatusInternalServerError, err.Error())
 		return
 	}
 	c.JSON(http.StatusOK, sessionObj)

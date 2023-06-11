@@ -1,17 +1,20 @@
 package session
 
-type Session struct {
-	ApiKey     string `json:"apiKey"`
-	Name       string `json:"name"`
-	UniqueName string `json:"uniqueName"`
-	Picture    string `json:"picture"`
-}
+import "github.com/rkonfj/lln/state"
+
+var defaultSessionManager = NewSessionManager()
 
 func Create(email, name, picture string) (*Session, error) {
-	return &Session{
-		ApiKey:     "",
+	u := state.UserByEmail(email)
+	if u == nil {
+		u = state.NewUser(email, name, picture)
+	}
+
+	s := &Session{
 		Name:       name,
-		UniqueName: "",
+		UniqueName: u.UniqueName,
 		Picture:    picture,
-	}, nil
+	}
+	defaultSessionManager.Create(s)
+	return s, nil
 }
