@@ -13,3 +13,7 @@ func userStatus(c *gin.Context) {
 func likeStatus(c *gin.Context) {
 
 }
+
+func newStatus(c *gin.Context) {
+
+}

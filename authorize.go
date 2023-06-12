@@ -10,6 +10,7 @@ import (
 	"github.com/decred/base58"
 	"github.com/gin-gonic/gin"
 	"github.com/rkonfj/lln/session"
+	"github.com/rkonfj/lln/state"
 )
 
 func authorize(c *gin.Context) {
@@ -45,12 +46,18 @@ func authorize(c *gin.Context) {
 		Verified bool   `json:"email_verified"`
 		Picture  string `json:"picture"`
 		Name     string `json:"name"`
+		Locale   string `json:"locale"`
 	}
 	if err := idToken.Claims(&claims); err != nil {
 		c.JSON(http.StatusInternalServerError, err)
 		return
 	}
-	sessionObj, err := session.Create(claims.Email, claims.Name, claims.Picture)
+	sessionObj, err := session.Create(&state.UserOptions{
+		Name:    claims.Name,
+		Picture: claims.Picture,
+		Email:   claims.Email,
+		Locale:  claims.Locale,
+	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
 		return

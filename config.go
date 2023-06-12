@@ -11,8 +11,9 @@ import (
 )
 
 type Config struct {
-	Listen string `yaml:"listen"`
-	OIDC   []OIDC `yaml:"oidc"`
+	Listen string      `yaml:"listen"`
+	OIDC   []OIDC      `yaml:"oidc"`
+	State  StateConfig `yaml:"state"`
 }
 
 type OIDC struct {
@@ -29,6 +30,13 @@ type OIDCProvider struct {
 	Config   *oauth2.Config
 }
 
+type StateConfig struct {
+	Etcd *EtcdConfig `yaml:"etcd"`
+}
+type EtcdConfig struct {
+	Endpoints []string `yaml:"endpoints"`
+}
+
 var (
 	config        *Config
 	oidcProviders map[string]*OIDCProvider = make(map[string]*OIDCProvider)
@@ -43,6 +51,9 @@ func loadConfig(configPath string) error {
 	err = yaml.NewDecoder(configF).Decode(config)
 	if err != nil {
 		return err
+	}
+	if config.State.Etcd == nil {
+		config.State.Etcd = &EtcdConfig{Endpoints: []string{"https://127.0.0.1:2379"}}
 	}
 	for _, o := range config.OIDC {
 		provider, err := oidc.NewProvider(context.Background(), o.Issuer)

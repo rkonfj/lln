@@ -31,11 +31,11 @@ func NewSessionManager() *MemorySessionManger {
 }
 
 func (sm *MemorySessionManger) Create(s *Session) error {
+	sm.lock.Lock()
+	defer sm.lock.Unlock()
 	b := make([]byte, 32)
 	rand.Reader.Read(b)
 	s.ApiKey = base58.Encode(b)
-	sm.lock.Lock()
-	defer sm.lock.Unlock()
 	sm.session[s.ApiKey] = s
 	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rkonfj/lln/state"
 	"github.com/spf13/cobra"
 )
 
@@ -24,7 +25,11 @@ func initAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	return loadConfig(configPath)
+	err = loadConfig(configPath)
+	if err != nil {
+		return err
+	}
+	return state.InitState(config.State.Etcd.Endpoints)
 }
 
 func startAction(cmd *cobra.Command, args []string) error {
@@ -32,6 +37,7 @@ func startAction(cmd *cobra.Command, args []string) error {
 	r.POST(fmt.Sprintf("/authorize/:%s", Provider), authorize)
 	r.POST(fmt.Sprintf("/like/status/:%s", StatusID), likeStatus)
 	r.POST(fmt.Sprintf("/like/user/:%s", UniqueName), likeUser)
+	r.POST("/status", newStatus)
 
 	r.GET(fmt.Sprintf("/authorize/:%s", Provider), authorizeRedirect)
 	r.GET(fmt.Sprintf("/:%s", UniqueName), profile)

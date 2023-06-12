@@ -1,2 +1,2 @@
 # Introduction
-`LLN` is a twitterlike server 
+`LLN` is a twitterlike api server 
