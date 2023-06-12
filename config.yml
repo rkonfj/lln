@@ -12,3 +12,6 @@ state:
   etcd:
     endpoints:
       - https://172.18.20.6:2379
+    certFile: 
+    keyFile:
+    trustedCAFile: 

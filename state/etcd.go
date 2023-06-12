@@ -7,16 +7,39 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.etcd.io/etcd/pkg/transport"
 )
 
 var etcdClient *clientv3.Client
 
-func InitState(endpoints []string) (err error) {
-	etcdClient, err = clientv3.New(clientv3.Config{
-		Endpoints:   endpoints,
+type EtcdOptions struct {
+	Endpoints     []string
+	CertFile      string
+	KeyFile       string
+	TrustedCAFile string
+}
+
+func InitState(opts EtcdOptions) (err error) {
+	cfg := clientv3.Config{
+		Endpoints:   opts.Endpoints,
 		DialTimeout: 5 * time.Second,
-	})
+	}
+
+	tlsInfo := transport.TLSInfo{
+		CertFile:      opts.CertFile,
+		KeyFile:       opts.KeyFile,
+		TrustedCAFile: opts.TrustedCAFile,
+	}
+	tlsConfig, err := tlsInfo.ClientConfig()
+	if err != nil {
+		logrus.Debug(err)
+	} else {
+		cfg.TLS = tlsConfig
+	}
+
+	etcdClient, err = clientv3.New(cfg)
 	return
 }
 

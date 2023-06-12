@@ -34,7 +34,10 @@ type StateConfig struct {
 	Etcd *EtcdConfig `yaml:"etcd"`
 }
 type EtcdConfig struct {
-	Endpoints []string `yaml:"endpoints"`
+	Endpoints     []string `yaml:"endpoints"`
+	CertFile      string   `yaml:"certFile,omitempty"`
+	KeyFile       string   `yaml:"keyFile,omitempty"`
+	TrustedCAFile string   `yaml:"trustedCAFile,omitempty"`
 }
 
 var (
@@ -53,7 +56,7 @@ func loadConfig(configPath string) error {
 		return err
 	}
 	if config.State.Etcd == nil {
-		config.State.Etcd = &EtcdConfig{Endpoints: []string{"https://127.0.0.1:2379"}}
+		config.State.Etcd = &EtcdConfig{Endpoints: []string{"http://127.0.0.1:2379"}}
 	}
 	for _, o := range config.OIDC {
 		provider, err := oidc.NewProvider(context.Background(), o.Issuer)
