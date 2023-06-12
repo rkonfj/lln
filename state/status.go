@@ -45,8 +45,12 @@ func NewStatus(opts *StatusOptions) (*Status, error) {
 	ops := []clientv3.Op{
 		clientv3.OpPut(statusKey, string(b)),
 		clientv3.OpPut(userStatusKey, statusKey),
-		clientv3.OpPut(userUniqueNameKey, statusKey),
 	}
+
+	if userStatusKey != userUniqueNameKey {
+		ops = append(ops, clientv3.OpPut(userUniqueNameKey, statusKey))
+	}
+
 	txn := etcdClient.Txn(context.Background())
 
 	if len(s.RefStatus) > 0 {
@@ -125,4 +129,29 @@ func LikeStatus(user *ActUser, statusID string) error {
 	}
 	_, err = etcdClient.KV.Put(context.Background(), statusLikeSetKey, string(b))
 	return err
+}
+
+func Recommendations(user *ActUser, after string, size int64) (ss []*Status) {
+	ops := []clientv3.OpOption{
+		clientv3.WithLimit(size),
+		clientv3.WithPrefix(),
+		clientv3.WithSort(clientv3.SortByCreateRevision, clientv3.SortDescend)}
+	if len(after) > 0 {
+		ops = append(ops, clientv3.WithRange(after))
+	}
+	resp, err := etcdClient.KV.Get(context.Background(), stateKey("/status"), ops...)
+	if err != nil {
+		logrus.Debug(err)
+		return
+	}
+	for _, kv := range resp.Kvs {
+		s := &Status{}
+		err = json.Unmarshal(kv.Value, s)
+		if err != nil {
+			logrus.Debug(err)
+			continue
+		}
+		ss = append(ss, s)
+	}
+	return
 }

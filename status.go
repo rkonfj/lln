@@ -91,12 +91,14 @@ func newStatus(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, err.Error())
 		return
 	}
-	_, err = state.NewStatus(&state.StatusOptions{
+	s, err := state.NewStatus(&state.StatusOptions{
 		Content:   opts.Content,
 		RefStatus: opts.RefStatus,
 		User:      ssion.ToUser(),
 	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
+		return
 	}
+	c.JSON(http.StatusOK, s)
 }

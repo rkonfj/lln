@@ -3,10 +3,12 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rkonfj/lln/session"
 	"github.com/rkonfj/lln/state"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -19,6 +21,7 @@ func main() {
 		RunE:    startAction,
 	}
 	cmd.Flags().StringP("config", "c", "config.yml", "config file (default is config.yml)")
+	cmd.Flags().String("log-level", logrus.InfoLevel.String(), "logging level")
 	cmd.Execute()
 }
 
@@ -30,6 +33,20 @@ func initAction(cmd *cobra.Command, args []string) error {
 	err = loadConfig(configPath)
 	if err != nil {
 		return err
+	}
+	logLevel, err := cmd.Flags().GetString("log-level")
+	if err != nil {
+		return err
+	}
+	ll, err := logrus.ParseLevel(logLevel)
+	if err != nil {
+		return err
+	}
+	logrus.SetLevel(ll)
+	logrus.SetOutput(os.Stdout)
+	logrus.SetFormatter(&logrus.TextFormatter{FullTimestamp: true, DisableColors: true})
+	if ll != logrus.DebugLevel {
+		gin.SetMode(gin.ReleaseMode)
 	}
 	return state.InitState(state.EtcdOptions{
 		Endpoints:     config.State.Etcd.Endpoints,
