@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rkonfj/lln/session"
 	"github.com/rkonfj/lln/state"
+	"github.com/rkonfj/lln/util"
 )
 
 func explore(c *gin.Context) {
@@ -21,7 +22,7 @@ func explore(c *gin.Context) {
 		}
 	}
 	var user *state.ActUser
-	if s, ok := c.Get(KeySession); ok {
+	if s, ok := c.Get(util.KeySession); ok {
 		user = s.(*session.Session).ToUser()
 	}
 	ss := state.Recommendations(user, c.Query("after"), size)

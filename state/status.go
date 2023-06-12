@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/decred/base58"
+	"github.com/rkonfj/lln/util"
 	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -16,6 +17,7 @@ type StatusOptions struct {
 	Content   string
 	RefStatus string
 	User      *ActUser
+	Labels    []string
 }
 
 type Status struct {
@@ -24,6 +26,7 @@ type Status struct {
 	RefStatus  string    `json:"prev"`
 	User       *ActUser  `json:"user"`
 	CreateTime time.Time `json:"createTime"`
+	Labels     []string
 }
 
 func NewStatus(opts *StatusOptions) (*Status, error) {
@@ -33,11 +36,14 @@ func NewStatus(opts *StatusOptions) (*Status, error) {
 		RefStatus:  opts.RefStatus,
 		User:       opts.User,
 		CreateTime: time.Now(),
+		Labels:     opts.Labels,
 	}
 	b, err := json.Marshal(s)
 	if err != nil {
 		return nil, err
 	}
+
+	txn := etcdClient.Txn(context.Background())
 	statusKey := stateKey(fmt.Sprintf("/status/%s", s.ID))
 	userStatusKey := stateKey(fmt.Sprintf("/%s/status/%s", s.User.ID, s.ID))
 	userUniqueNameKey := stateKey(fmt.Sprintf("/%s/status/%s", s.User.UniqueName, s.ID))
@@ -51,11 +57,19 @@ func NewStatus(opts *StatusOptions) (*Status, error) {
 		ops = append(ops, clientv3.OpPut(userUniqueNameKey, statusKey))
 	}
 
-	txn := etcdClient.Txn(context.Background())
-
 	if len(s.RefStatus) > 0 {
 		ops = append(ops, clientv3.OpPut(statusCommentsKey, statusKey))
 	}
+
+	if len(s.Labels) > 0 {
+		for _, l := range util.Unique(s.Labels) {
+			key := stateKey(fmt.Sprintf("/labels/%s/status/%s", l, s.ID))
+			ops = append(ops, clientv3.OpPut(key, ""))
+			key = stateKey(fmt.Sprintf("/label/%s", l))
+			ops = append(ops, clientv3.OpPut(key, l))
+		}
+	}
+
 	_, err = txn.Then(ops...).Commit()
 
 	if err != nil {

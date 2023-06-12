@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rkonfj/lln/session"
 	"github.com/rkonfj/lln/state"
+	"github.com/rkonfj/lln/util"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -59,15 +60,15 @@ func initAction(cmd *cobra.Command, args []string) error {
 func startAction(cmd *cobra.Command, args []string) error {
 	r := gin.Default()
 	r.Use(security)
-	r.POST(fmt.Sprintf("/authorize/:%s", Provider), authorize)
-	r.POST(fmt.Sprintf("/like/status/:%s", StatusID), likeStatus)
-	r.POST(fmt.Sprintf("/like/user/:%s", UniqueName), likeUser)
+	r.POST(fmt.Sprintf("/authorize/:%s", util.Provider), authorize)
+	r.POST(fmt.Sprintf("/like/status/:%s", util.StatusID), likeStatus)
+	r.POST(fmt.Sprintf("/like/user/:%s", util.UniqueName), likeUser)
 	r.POST("/status", newStatus)
 
-	r.GET(fmt.Sprintf("/authorize/:%s", Provider), authorizeRedirect)
-	r.GET(fmt.Sprintf("/:%s", UniqueName), profile)
-	r.GET(fmt.Sprintf("/:%s/status", UniqueName), userStatus)
-	r.GET(fmt.Sprintf("/status/:%s", StatusID), status)
+	r.GET(fmt.Sprintf("/authorize/:%s", util.Provider), authorizeRedirect)
+	r.GET(fmt.Sprintf("/:%s", util.UniqueName), profile)
+	r.GET(fmt.Sprintf("/:%s/status", util.UniqueName), userStatus)
+	r.GET(fmt.Sprintf("/status/:%s", util.StatusID), status)
 	r.GET("/explore", explore)
 	r.GET("/labels", labels)
 
@@ -88,6 +89,6 @@ func security(c *gin.Context) {
 			c.Abort()
 			return
 		}
-		c.Set(KeySession, ssion)
+		c.Set(util.KeySession, ssion)
 	}
 }

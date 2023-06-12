@@ -2,12 +2,14 @@ package main
 
 import (
 	"net/http"
+	"regexp"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rkonfj/lln/session"
 	"github.com/rkonfj/lln/state"
+	"github.com/rkonfj/lln/util"
 )
 
 type StatusOptions struct {
@@ -23,8 +25,10 @@ type Status struct {
 	CreateTime time.Time      `json:"createTime"`
 }
 
+var labelsRegex = regexp.MustCompile(`#([\p{L}\d_]+)`)
+
 func status(c *gin.Context) {
-	status := chainStatus(c.Param(StatusID))
+	status := chainStatus(c.Param(util.StatusID))
 	if status == nil {
 		c.Status(http.StatusNotFound)
 		return
@@ -60,18 +64,18 @@ func userStatus(c *gin.Context) {
 			return
 		}
 	}
-	c.JSON(http.StatusOK, state.UserStatus(c.Param(UniqueName), c.Query("after"), size))
+	c.JSON(http.StatusOK, state.UserStatus(c.Param(util.UniqueName), c.Query("after"), size))
 }
 
 func likeStatus(c *gin.Context) {
 	var ssion *session.Session
-	if s, ok := c.Get(KeySession); ok {
+	if s, ok := c.Get(util.KeySession); ok {
 		ssion = s.(*session.Session)
 	} else {
 		c.Status(http.StatusUnauthorized)
 		return
 	}
-	err := state.LikeStatus(ssion.ToUser(), c.Param(StatusID))
+	err := state.LikeStatus(ssion.ToUser(), c.Param(util.StatusID))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
 	}
@@ -79,23 +83,31 @@ func likeStatus(c *gin.Context) {
 
 func newStatus(c *gin.Context) {
 	var ssion *session.Session
-	if s, ok := c.Get(KeySession); ok {
+	if s, ok := c.Get(util.KeySession); ok {
 		ssion = s.(*session.Session)
 	} else {
 		c.Status(http.StatusUnauthorized)
 		return
 	}
-	opts := &StatusOptions{}
-	err := c.BindJSON(opts)
+	req := &StatusOptions{}
+	err := c.BindJSON(req)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, err.Error())
 		return
 	}
-	s, err := state.NewStatus(&state.StatusOptions{
-		Content:   opts.Content,
-		RefStatus: opts.RefStatus,
+	opts := &state.StatusOptions{
+		Content:   req.Content,
+		RefStatus: req.RefStatus,
 		User:      ssion.ToUser(),
-	})
+		Labels:    []string{},
+	}
+	matches := labelsRegex.FindAllStringSubmatch(opts.Content, -1)
+	if len(matches) > 0 {
+		for _, m := range matches {
+			opts.Labels = append(opts.Labels, m[1])
+		}
+	}
+	s, err := state.NewStatus(opts)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
 		return

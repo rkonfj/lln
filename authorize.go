@@ -11,12 +11,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rkonfj/lln/session"
 	"github.com/rkonfj/lln/state"
+	"github.com/rkonfj/lln/util"
 )
 
 func authorize(c *gin.Context) {
-	provider := getProvider(c.Param(Provider))
+	providerName := c.Param(util.Provider)
+	provider := getProvider(providerName)
 	if provider == nil {
-		c.JSON(http.StatusBadRequest, fmt.Sprintf("provider %s not supported", c.Param(Provider)))
+		c.JSON(http.StatusBadRequest, fmt.Sprintf("provider %s not supported", providerName))
 		return
 	}
 	oauth2Token, err := provider.Config.Exchange(context.Background(), c.Query("code"))
@@ -66,9 +68,10 @@ func authorize(c *gin.Context) {
 }
 
 func authorizeRedirect(c *gin.Context) {
-	provider := getProvider(c.Param(Provider))
+	providerName := c.Param(util.Provider)
+	provider := getProvider(providerName)
 	if provider == nil {
-		c.JSON(http.StatusBadRequest, fmt.Sprintf("provider %s not supported", c.Param(Provider)))
+		c.JSON(http.StatusBadRequest, fmt.Sprintf("provider %s not supported", providerName))
 		return
 	}
 	b := make([]byte, 16)

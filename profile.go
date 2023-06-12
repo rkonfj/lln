@@ -6,14 +6,15 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rkonfj/lln/session"
 	"github.com/rkonfj/lln/state"
+	"github.com/rkonfj/lln/util"
 )
 
 func profile(c *gin.Context) {
 	var ssion *session.Session
-	if s, ok := c.Get(KeySession); ok {
+	if s, ok := c.Get(util.KeySession); ok {
 		ssion = s.(*session.Session)
 	}
-	u := state.UserByUniqueName(c.Param(UniqueName))
+	u := state.UserByUniqueName(c.Param(util.UniqueName))
 	if u == nil {
 		c.Status(http.StatusNotFound)
 		return
@@ -28,13 +29,13 @@ func profile(c *gin.Context) {
 
 func likeUser(c *gin.Context) {
 	var ssion *session.Session
-	if s, ok := c.Get(KeySession); ok {
+	if s, ok := c.Get(util.KeySession); ok {
 		ssion = s.(*session.Session)
 	} else {
 		c.Status(http.StatusUnauthorized)
 		return
 	}
-	err := state.LikeUser(ssion.ToUser(), c.Param(UniqueName))
+	err := state.LikeUser(ssion.ToUser(), c.Param(util.UniqueName))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
 	}
