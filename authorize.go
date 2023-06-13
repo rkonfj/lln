@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	"fmt"
 	"net/http"
 
@@ -64,18 +63,27 @@ func authorize(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, sessionObj)
+	jump := string(base58.Decode(c.Query("state")))
+	if c.Request.Method == http.MethodPost {
+		c.Header("X-Backurl", jump)
+		c.JSON(http.StatusOK, sessionObj)
+	} else {
+		c.Redirect(http.StatusFound, jump)
+	}
 }
 
-func authorizeRedirect(c *gin.Context) {
+func oidcRedirect(c *gin.Context) {
 	providerName := c.Param(util.Provider)
 	provider := getProvider(providerName)
 	if provider == nil {
 		c.JSON(http.StatusBadRequest, fmt.Sprintf("provider %s not supported", providerName))
 		return
 	}
-	b := make([]byte, 16)
-	rand.Reader.Read(b)
 
-	c.Redirect(http.StatusFound, provider.Config.AuthCodeURL(base58.Encode(b)))
+	jump := c.Query("jump")
+	if len(jump) == 0 {
+		jump = "/"
+	}
+
+	c.Redirect(http.StatusFound, provider.Config.AuthCodeURL(base58.Encode([]byte(jump))))
 }

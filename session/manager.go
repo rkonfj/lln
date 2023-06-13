@@ -44,7 +44,7 @@ func NewSessionManager() *MemorySessionManger {
 }
 
 func (sm *MemorySessionManger) Create(s *Session) error {
-	b := make([]byte, 20)
+	b := make([]byte, 16)
 	rand.Reader.Read(b)
 	s.ApiKey = fmt.Sprintf("sk-%s", base58.Encode(append(b, xid.New().Bytes()...)))
 	sm.lock.Lock()

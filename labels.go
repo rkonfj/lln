@@ -8,6 +8,6 @@ import (
 )
 
 func labels(c *gin.Context) {
-	labels := state.GetLabels()
+	labels := state.GetLabels(c.Query("prefix"))
 	c.JSON(http.StatusOK, labels)
 }

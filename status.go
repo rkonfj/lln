@@ -55,7 +55,7 @@ func chainStatus(statusID string) *Status {
 
 func userStatus(c *gin.Context) {
 	sizeStr := c.Query("size")
-	size := int64(10)
+	size := int64(20)
 	var err error
 	if len(sizeStr) == 0 {
 		size, err = strconv.ParseInt(sizeStr, 10, 64)

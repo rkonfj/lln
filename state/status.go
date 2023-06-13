@@ -64,7 +64,7 @@ func NewStatus(opts *StatusOptions) (*Status, error) {
 	if len(s.Labels) > 0 {
 		for _, l := range util.Unique(s.Labels) {
 			key := stateKey(fmt.Sprintf("/labels/%s/status/%s", l, s.ID))
-			ops = append(ops, clientv3.OpPut(key, ""))
+			ops = append(ops, clientv3.OpPut(key, statusKey))
 			key = stateKey(fmt.Sprintf("/label/%s", l))
 			ops = append(ops, clientv3.OpPut(key, l))
 		}

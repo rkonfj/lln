@@ -27,14 +27,6 @@ func main() {
 }
 
 func initAction(cmd *cobra.Command, args []string) error {
-	configPath, err := cmd.Flags().GetString("config")
-	if err != nil {
-		return err
-	}
-	err = loadConfig(configPath)
-	if err != nil {
-		return err
-	}
 	logLevel, err := cmd.Flags().GetString("log-level")
 	if err != nil {
 		return err
@@ -49,6 +41,16 @@ func initAction(cmd *cobra.Command, args []string) error {
 	if ll != logrus.DebugLevel {
 		gin.SetMode(gin.ReleaseMode)
 	}
+
+	configPath, err := cmd.Flags().GetString("config")
+	if err != nil {
+		return err
+	}
+	err = loadConfig(configPath)
+	if err != nil {
+		return err
+	}
+
 	return state.InitState(state.EtcdOptions{
 		Endpoints:     config.State.Etcd.Endpoints,
 		CertFile:      config.State.Etcd.CertFile,
@@ -59,36 +61,36 @@ func initAction(cmd *cobra.Command, args []string) error {
 
 func startAction(cmd *cobra.Command, args []string) error {
 	r := gin.Default()
-	r.Use(security)
-	r.POST(fmt.Sprintf("/authorize/:%s", util.Provider), authorize)
-	r.POST(fmt.Sprintf("/like/status/:%s", util.StatusID), likeStatus)
-	r.POST(fmt.Sprintf("/like/user/:%s", util.UniqueName), likeUser)
-	r.POST("/status", newStatus)
 
-	r.GET(fmt.Sprintf("/authorize/:%s", util.Provider), authorizeRedirect)
-	r.GET(fmt.Sprintf("/:%s", util.UniqueName), profile)
-	r.GET(fmt.Sprintf("/:%s/status", util.UniqueName), userStatus)
-	r.GET(fmt.Sprintf("/status/:%s", util.StatusID), status)
-	r.GET("/explore", explore)
-	r.GET("/labels", labels)
+	r.Group("/i").Use(security).
+		POST(fmt.Sprintf("/like/status/:%s", util.StatusID), likeStatus).
+		POST(fmt.Sprintf("/like/user/:%s", util.UniqueName), likeUser).
+		POST("/status", newStatus)
+
+	r.POST(fmt.Sprintf("/authorize/:%s", util.Provider), authorize).
+		GET(fmt.Sprintf("/authorize/:%s", util.Provider), authorize).
+		GET(fmt.Sprintf("/oidc/:%s", util.Provider), oidcRedirect).
+		GET(fmt.Sprintf("/user/:%s", util.UniqueName), profile).
+		GET(fmt.Sprintf("/user/:%s/status", util.UniqueName), userStatus).
+		GET(fmt.Sprintf("/user/status/:%s", util.StatusID), status).
+		GET("/explore", explore).
+		GET("/labels", labels)
 
 	return r.Run(config.Listen)
 }
 
 func security(c *gin.Context) {
-	if c.Request.RequestURI == "/status" {
-		apiKey := c.GetHeader("Authorization")
-		if len(apiKey) == 0 {
-			c.Status(http.StatusUnauthorized)
-			c.Abort()
-			return
-		}
-		ssion := session.DefaultSessionManager.Load(apiKey)
-		if ssion == nil {
-			c.Status(http.StatusUnauthorized)
-			c.Abort()
-			return
-		}
-		c.Set(util.KeySession, ssion)
+	apiKey := c.GetHeader("Authorization")
+	if len(apiKey) == 0 {
+		c.Status(http.StatusUnauthorized)
+		c.Abort()
+		return
 	}
+	ssion := session.DefaultSessionManager.Load(apiKey)
+	if ssion == nil {
+		c.Status(http.StatusUnauthorized)
+		c.Abort()
+		return
+	}
+	c.Set(util.KeySession, ssion)
 }

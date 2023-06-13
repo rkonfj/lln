@@ -2,6 +2,7 @@ package state
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/sirupsen/logrus"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -12,8 +13,8 @@ type Label struct {
 	Count int64
 }
 
-func GetLabels() (labels []*Label) {
-	resp, err := etcdClient.KV.Get(context.Background(), stateKey("/label/"),
+func GetLabels(prefix string) (labels []*Label) {
+	resp, err := etcdClient.KV.Get(context.Background(), stateKey(fmt.Sprintf("/label/%s", prefix)),
 		clientv3.WithSort(clientv3.SortByVersion, clientv3.SortDescend),
 		clientv3.WithPrefix())
 	if err != nil {
