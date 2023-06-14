@@ -65,7 +65,7 @@ func authorize(c *gin.Context) {
 	}
 	jump := string(base58.Decode(c.Query("state")))
 	if c.Request.Method == http.MethodPost {
-		c.Header("X-Backurl", jump)
+		c.Header("X-Jump", jump)
 		c.JSON(http.StatusOK, sessionObj)
 	} else {
 		c.Redirect(http.StatusFound, jump)

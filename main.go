@@ -67,7 +67,8 @@ func startAction(cmd *cobra.Command, args []string) error {
 		POST(fmt.Sprintf("/like/user/:%s", util.UniqueName), likeUser).
 		POST("/status", newStatus)
 
-	r.POST(fmt.Sprintf("/authorize/:%s", util.Provider), authorize).
+	r.Group("/o").
+		POST(fmt.Sprintf("/authorize/:%s", util.Provider), authorize).
 		GET(fmt.Sprintf("/authorize/:%s", util.Provider), authorize).
 		GET(fmt.Sprintf("/oidc/:%s", util.Provider), oidcRedirect).
 		GET(fmt.Sprintf("/user/:%s", util.UniqueName), profile).

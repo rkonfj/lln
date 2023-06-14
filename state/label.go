@@ -9,8 +9,8 @@ import (
 )
 
 type Label struct {
-	Value string
-	Count int64
+	Value string `json:"value"`
+	Count int64  `json:"count"`
 }
 
 func GetLabels(prefix string) (labels []*Label) {

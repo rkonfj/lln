@@ -14,19 +14,24 @@ import (
 )
 
 type StatusOptions struct {
-	Content   string
+	Content   []StatusFragment
 	RefStatus string
 	User      *ActUser
 	Labels    []string
 }
 
 type Status struct {
-	ID         string    `json:"id"`
-	Content    string    `json:"content"`
-	RefStatus  string    `json:"prev"`
-	User       *ActUser  `json:"user"`
-	CreateTime time.Time `json:"createTime"`
+	ID         string           `json:"id"`
+	Content    []StatusFragment `json:"content"`
+	RefStatus  string           `json:"prev"`
+	User       *ActUser         `json:"user"`
+	CreateTime time.Time        `json:"createTime"`
 	Labels     []string
+}
+
+type StatusFragment struct {
+	Value string `json:"value"`
+	Type  string `json:"type"`
 }
 
 func NewStatus(opts *StatusOptions) (*Status, error) {

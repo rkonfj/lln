@@ -13,16 +13,16 @@ import (
 )
 
 type StatusOptions struct {
-	Content   string `json:"content" binding:"required"`
-	RefStatus string `json:"prev"`
+	Content   []state.StatusFragment `json:"content" binding:"required"`
+	RefStatus string                 `json:"prev"`
 }
 
 type Status struct {
-	ID         string         `json:"id"`
-	Content    string         `json:"content"`
-	RefStatus  *Status        `json:"prev"`
-	User       *state.ActUser `json:"user"`
-	CreateTime time.Time      `json:"createTime"`
+	ID         string                 `json:"id"`
+	Content    []state.StatusFragment `json:"content"`
+	RefStatus  *Status                `json:"prev"`
+	User       *state.ActUser         `json:"user"`
+	CreateTime time.Time              `json:"createTime"`
 }
 
 var labelsRegex = regexp.MustCompile(`#([\p{L}\d_]+)`)
@@ -101,12 +101,18 @@ func newStatus(c *gin.Context) {
 		User:      ssion.ToUser(),
 		Labels:    []string{},
 	}
-	matches := labelsRegex.FindAllStringSubmatch(opts.Content, -1)
-	if len(matches) > 0 {
-		for _, m := range matches {
-			opts.Labels = append(opts.Labels, m[1])
+	for _, f := range opts.Content {
+		if f.Type != "text" {
+			continue
+		}
+		matches := labelsRegex.FindAllStringSubmatch(f.Value, -1)
+		if len(matches) > 0 {
+			for _, m := range matches {
+				opts.Labels = append(opts.Labels, m[1])
+			}
 		}
 	}
+
 	s, err := state.NewStatus(opts)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
