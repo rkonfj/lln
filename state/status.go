@@ -105,14 +105,14 @@ func GetStatus(statusID string) *Status {
 	return s
 }
 
-func UserStatus(uniqueName, endKey string, size int64) (ss []*Status) {
+func UserStatus(uniqueName, after string, size int64) (ss []*Status) {
 	opts := []clientv3.OpOption{
 		clientv3.WithPrefix(),
 		clientv3.WithFromKey(),
 		clientv3.WithLimit(size),
 		clientv3.WithSort(clientv3.SortByKey, clientv3.SortDescend)}
-	if len(endKey) > 0 {
-		opts = append(opts, clientv3.WithRange(endKey))
+	if len(after) > 0 {
+		opts = append(opts, clientv3.WithRange(stateKey(fmt.Sprintf("%s/status/%s", uniqueName, after))))
 	}
 	resp, err := etcdClient.KV.Get(context.Background(), stateKey(fmt.Sprintf("/%s/status", uniqueName)), opts...)
 	if err != nil {
@@ -156,7 +156,7 @@ func Recommendations(user *ActUser, after string, size int64) (ss []*Status) {
 		clientv3.WithPrefix(),
 		clientv3.WithSort(clientv3.SortByCreateRevision, clientv3.SortDescend)}
 	if len(after) > 0 {
-		ops = append(ops, clientv3.WithRange(after))
+		ops = append(ops, clientv3.WithRange(stateKey(fmt.Sprintf("/status/%s", after))))
 	}
 	resp, err := etcdClient.KV.Get(context.Background(), stateKey("/status"), ops...)
 	if err != nil {

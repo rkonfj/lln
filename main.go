@@ -62,12 +62,12 @@ func initAction(cmd *cobra.Command, args []string) error {
 func startAction(cmd *cobra.Command, args []string) error {
 	r := gin.Default()
 
-	r.Group("/i").Use(security).
+	r.Group("/i").Use(security).Use(common).
 		POST(fmt.Sprintf("/like/status/:%s", util.StatusID), likeStatus).
 		POST(fmt.Sprintf("/like/user/:%s", util.UniqueName), likeUser).
 		POST("/status", newStatus)
 
-	r.Group("/o").
+	r.Group("/o").Use(common).
 		POST(fmt.Sprintf("/authorize/:%s", util.Provider), authorize).
 		GET(fmt.Sprintf("/authorize/:%s", util.Provider), authorize).
 		GET(fmt.Sprintf("/oidc/:%s", util.Provider), oidcRedirect).
@@ -94,4 +94,14 @@ func security(c *gin.Context) {
 		return
 	}
 	c.Set(util.KeySession, ssion)
+}
+
+func common(c *gin.Context) {
+	apiKey := c.GetHeader("Authorization")
+	if len(apiKey) == 0 {
+		c.Header("X-Session-Valid", "false")
+		return
+	}
+	ssion := session.DefaultSessionManager.Load(apiKey)
+	c.Header("X-Session-Valid", fmt.Sprintf("%t", ssion != nil))
 }
