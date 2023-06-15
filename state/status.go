@@ -26,7 +26,7 @@ type Status struct {
 	RefStatus  string           `json:"prev"`
 	User       *ActUser         `json:"user"`
 	CreateTime time.Time        `json:"createTime"`
-	Labels     []string
+	Labels     []string         `json:"labels"`
 }
 
 type StatusFragment struct {
@@ -108,7 +108,6 @@ func GetStatus(statusID string) *Status {
 func UserStatus(uniqueName, after string, size int64) (ss []*Status) {
 	opts := []clientv3.OpOption{
 		clientv3.WithPrefix(),
-		clientv3.WithFromKey(),
 		clientv3.WithLimit(size),
 		clientv3.WithSort(clientv3.SortByKey, clientv3.SortDescend)}
 	if len(after) > 0 {

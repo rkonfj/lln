@@ -57,14 +57,34 @@ func userStatus(c *gin.Context) {
 	sizeStr := c.Query("size")
 	size := int64(20)
 	var err error
-	if len(sizeStr) == 0 {
+	if len(sizeStr) > 0 {
 		size, err = strconv.ParseInt(sizeStr, 10, 64)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, err.Error())
 			return
 		}
 	}
-	c.JSON(http.StatusOK, state.UserStatus(c.Param(util.UniqueName), c.Query("after"), size))
+	ss := state.UserStatus(c.Param(util.UniqueName), c.Query("after"), size)
+	var ret []*Status
+	for _, s := range ss {
+		status := &Status{
+			ID:         s.ID,
+			Content:    s.Content,
+			User:       s.User,
+			CreateTime: s.CreateTime,
+		}
+		prev := state.GetStatus(s.RefStatus)
+		if prev != nil {
+			status.RefStatus = &Status{
+				ID:         prev.ID,
+				Content:    prev.Content,
+				User:       prev.User,
+				CreateTime: prev.CreateTime,
+			}
+		}
+		ret = append(ret, status)
+	}
+	c.JSON(http.StatusOK, ret)
 }
 
 func likeStatus(c *gin.Context) {

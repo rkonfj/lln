@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/decred/base58"
 	"github.com/rs/xid"
@@ -13,12 +14,13 @@ import (
 )
 
 type User struct {
-	ID         string `json:"id"`
-	UniqueName string `json:"uniqueName"`
-	Name       string `json:"name"`
-	Picture    string `json:"picture"`
-	Email      string `json:"email"`
-	Locale     string `json:"locale"`
+	ID         string    `json:"id"`
+	UniqueName string    `json:"uniqueName"`
+	Name       string    `json:"name"`
+	Picture    string    `json:"picture"`
+	Email      string    `json:"email"`
+	Locale     string    `json:"locale"`
+	CreateTime time.Time `json:"createTime"`
 }
 
 type ActUser struct {
@@ -64,10 +66,11 @@ func castUser(resp *clientv3.GetResponse, err error) *User {
 
 func NewUser(opts *UserOptions) *User {
 	u := &User{
-		Name:    opts.Name,
-		Email:   opts.Email,
-		Picture: opts.Picture,
-		Locale:  opts.Locale,
+		Name:       opts.Name,
+		Email:      opts.Email,
+		Picture:    opts.Picture,
+		Locale:     opts.Locale,
+		CreateTime: time.Now(),
 	}
 
 	// generate a User ID
