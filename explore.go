@@ -33,6 +33,7 @@ func explore(c *gin.Context) {
 			Content:    s.Content,
 			User:       s.User,
 			CreateTime: s.CreateTime,
+			Labels:     s.Labels,
 		}
 		prev := state.GetStatus(s.RefStatus)
 		if prev != nil {
@@ -41,6 +42,7 @@ func explore(c *gin.Context) {
 				Content:    prev.Content,
 				User:       prev.User,
 				CreateTime: prev.CreateTime,
+				Labels:     prev.Labels,
 			}
 		}
 		ret = append(ret, status)

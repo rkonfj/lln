@@ -23,6 +23,7 @@ type Status struct {
 	RefStatus  *Status                `json:"prev"`
 	User       *state.ActUser         `json:"user"`
 	CreateTime time.Time              `json:"createTime"`
+	Labels     []string               `json:"labels"`
 }
 
 var labelsRegex = regexp.MustCompile(`#([\p{L}\d_]+)`)
@@ -34,6 +35,21 @@ func status(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, status)
+}
+
+func statusComments(c *gin.Context) {
+	size := int64(20)
+	sizeStr := c.Query("size")
+	var err error
+	if len(sizeStr) > 0 {
+		size, err = strconv.ParseInt(sizeStr, 10, 64)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, err.Error())
+			return
+		}
+	}
+	comments := state.StatusComments(c.Param(util.StatusID), c.Query("after"), size)
+	c.JSON(http.StatusOK, comments)
 }
 
 func chainStatus(statusID string) *Status {
@@ -72,6 +88,7 @@ func userStatus(c *gin.Context) {
 			Content:    s.Content,
 			User:       s.User,
 			CreateTime: s.CreateTime,
+			Labels:     s.Labels,
 		}
 		prev := state.GetStatus(s.RefStatus)
 		if prev != nil {

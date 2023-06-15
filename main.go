@@ -74,6 +74,7 @@ func startAction(cmd *cobra.Command, args []string) error {
 		GET(fmt.Sprintf("/user/:%s", util.UniqueName), profile).
 		GET(fmt.Sprintf("/user/:%s/status", util.UniqueName), userStatus).
 		GET(fmt.Sprintf("/status/:%s", util.StatusID), status).
+		GET(fmt.Sprintf("/status/:%s/comments", util.StatusID), statusComments).
 		GET("/explore", explore).
 		GET("/labels", labels)
 
