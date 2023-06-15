@@ -28,22 +28,10 @@ func explore(c *gin.Context) {
 	ss := state.Recommendations(user, c.Query("after"), size)
 	var ret []*Status
 	for _, s := range ss {
-		status := &Status{
-			ID:         s.ID,
-			Content:    s.Content,
-			User:       s.User,
-			CreateTime: s.CreateTime,
-			Labels:     s.Labels,
-		}
+		status := castStatus(s)
 		prev := state.GetStatus(s.RefStatus)
 		if prev != nil {
-			status.RefStatus = &Status{
-				ID:         prev.ID,
-				Content:    prev.Content,
-				User:       prev.User,
-				CreateTime: prev.CreateTime,
-				Labels:     prev.Labels,
-			}
+			status.RefStatus = castStatus(prev)
 		}
 		ret = append(ret, status)
 	}

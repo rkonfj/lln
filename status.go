@@ -1,10 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"regexp"
 	"strconv"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rkonfj/lln/session"
@@ -24,6 +26,9 @@ type Status struct {
 	User       *state.ActUser         `json:"user"`
 	CreateTime time.Time              `json:"createTime"`
 	Labels     []string               `json:"labels"`
+	Comments   int64                  `json:"comments"`
+	LikeCount  int64                  `json:"likeCount"`
+	Views      int64                  `json:"views"`
 }
 
 var labelsRegex = regexp.MustCompile(`#([\p{L}\d_]+)`)
@@ -57,12 +62,7 @@ func chainStatus(statusID string) *Status {
 	if status == nil {
 		return nil
 	}
-	s := &Status{
-		ID:         status.ID,
-		Content:    status.Content,
-		User:       status.User,
-		CreateTime: status.CreateTime,
-	}
+	s := castStatus(status)
 	if len(status.RefStatus) > 0 {
 		s.RefStatus = chainStatus(status.RefStatus)
 	}
@@ -83,21 +83,10 @@ func userStatus(c *gin.Context) {
 	ss := state.UserStatus(c.Param(util.UniqueName), c.Query("after"), size)
 	var ret []*Status
 	for _, s := range ss {
-		status := &Status{
-			ID:         s.ID,
-			Content:    s.Content,
-			User:       s.User,
-			CreateTime: s.CreateTime,
-			Labels:     s.Labels,
-		}
+		status := castStatus(s)
 		prev := state.GetStatus(s.RefStatus)
 		if prev != nil {
-			status.RefStatus = &Status{
-				ID:         prev.ID,
-				Content:    prev.Content,
-				User:       prev.User,
-				CreateTime: prev.CreateTime,
-			}
+			status.RefStatus = castStatus(prev)
 		}
 		ret = append(ret, status)
 	}
@@ -132,6 +121,16 @@ func newStatus(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, err.Error())
 		return
 	}
+
+	for _, f := range req.Content {
+		count := utf8.RuneCountInString(f.Value)
+		if count > 380 {
+			c.JSON(http.StatusBadRequest,
+				fmt.Sprintf("maximum 380 unicode characters per paragraph, %d", count))
+			return
+		}
+	}
+
 	opts := &state.StatusOptions{
 		Content:   req.Content,
 		RefStatus: req.RefStatus,
@@ -156,4 +155,17 @@ func newStatus(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, s)
+}
+
+func castStatus(s *state.Status) *Status {
+	return &Status{
+		ID:         s.ID,
+		Content:    s.Content,
+		User:       s.User,
+		CreateTime: s.CreateTime,
+		Labels:     s.Labels,
+		Comments:   s.Comments,
+		Views:      s.Views,
+		LikeCount:  s.LikeCount,
+	}
 }

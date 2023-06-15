@@ -2,7 +2,6 @@ package state
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/sirupsen/logrus"
@@ -10,7 +9,7 @@ import (
 )
 
 func StatusComments(statusID, after string, size int64) (ss []*Status) {
-	statusCommentsKey := stateKey(fmt.Sprintf("/status/%s/comments/", statusID))
+	statusCommentsKey := stateKey(fmt.Sprintf("/comments/status/%s/", statusID))
 
 	ops := []clientv3.OpOption{
 		clientv3.WithLimit(size),
@@ -36,8 +35,7 @@ func StatusComments(statusID, after string, size int64) (ss []*Status) {
 			logrus.Error("bad relation")
 			continue
 		}
-		s := &Status{}
-		err = json.Unmarshal(resp.Kvs[0].Value, s)
+		s, err := unmarshalStatus(resp.Kvs[0].Value)
 		if err != nil {
 			logrus.Debug(err)
 			continue
@@ -45,4 +43,26 @@ func StatusComments(statusID, after string, size int64) (ss []*Status) {
 		ss = append(ss, s)
 	}
 	return
+}
+
+func commentsCount(statusID string) int64 {
+	return countKeys(stateKey(fmt.Sprintf("/comments/status/%s/", statusID)))
+}
+
+func likeCount(statusID string) int64 {
+	return countKeys(stateKey(fmt.Sprintf("/like/status/%s/", statusID)))
+}
+
+func viewCount(statusID string) int64 {
+	return countKeys(stateKey(fmt.Sprintf("/view/status/%s/", statusID)))
+}
+
+func countKeys(key string) int64 {
+	resp, err := etcdClient.KV.Get(context.Background(), key,
+		clientv3.WithCountOnly(), clientv3.WithPrefix())
+	if err != nil {
+		logrus.Debug(err)
+		return -1
+	}
+	return resp.Count
 }

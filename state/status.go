@@ -27,6 +27,9 @@ type Status struct {
 	User       *ActUser         `json:"user"`
 	CreateTime time.Time        `json:"createTime"`
 	Labels     []string         `json:"labels"`
+	Comments   int64            `json:"comments"`
+	LikeCount  int64            `json:"likeCount"`
+	Views      int64            `json:"views"`
 }
 
 type StatusFragment struct {
@@ -52,7 +55,7 @@ func NewStatus(opts *StatusOptions) (*Status, error) {
 	statusKey := stateKey(fmt.Sprintf("/status/%s", s.ID))
 	userStatusKey := stateKey(fmt.Sprintf("/%s/status/%s", s.User.ID, s.ID))
 	userUniqueNameKey := stateKey(fmt.Sprintf("/%s/status/%s", s.User.UniqueName, s.ID))
-	statusCommentsKey := stateKey(fmt.Sprintf("/status/%s/comments/%s", s.RefStatus, s.ID))
+	statusCommentsKey := stateKey(fmt.Sprintf("/comments/status/%s/%s", s.RefStatus, s.ID))
 	ops := []clientv3.Op{
 		clientv3.OpPut(statusKey, string(b)),
 		clientv3.OpPut(userStatusKey, statusKey),
@@ -96,8 +99,7 @@ func GetStatus(statusID string) *Status {
 		return nil
 	}
 
-	s := &Status{}
-	err = json.Unmarshal(resp.Kvs[0].Value, s)
+	s, err := unmarshalStatus(resp.Kvs[0].Value)
 	if err != nil {
 		logrus.Debug(err)
 		return nil
@@ -140,12 +142,16 @@ func UserStatus(uniqueName, after string, size int64) (ss []*Status) {
 }
 
 func LikeStatus(user *ActUser, statusID string) error {
-	statusLikeSetKey := stateKey(fmt.Sprintf("/status/%s/like/%s", statusID, user.ID))
+	statusLikeSetKey := stateKey(fmt.Sprintf("/like/status/%s/%s", statusID, user.ID))
 	b, err := json.Marshal(user)
 	if err != nil {
 		return err
 	}
-	_, err = etcdClient.KV.Put(context.Background(), statusLikeSetKey, string(b))
+	_, err = etcdClient.Txn(context.Background()).
+		If(clientv3.Compare(clientv3.Version(statusLikeSetKey), ">", 0)).
+		Then(clientv3.OpDelete(statusLikeSetKey)).
+		Else(clientv3.OpPut(statusLikeSetKey, string(b))).
+		Commit()
 	return err
 }
 
@@ -163,8 +169,7 @@ func Recommendations(user *ActUser, after string, size int64) (ss []*Status) {
 		return
 	}
 	for _, kv := range resp.Kvs {
-		s := &Status{}
-		err = json.Unmarshal(kv.Value, s)
+		s, err := unmarshalStatus(kv.Value)
 		if err != nil {
 			logrus.Debug(err)
 			continue
@@ -172,4 +177,16 @@ func Recommendations(user *ActUser, after string, size int64) (ss []*Status) {
 		ss = append(ss, s)
 	}
 	return
+}
+
+func unmarshalStatus(b []byte) (s *Status, err error) {
+	s = &Status{}
+	err = json.Unmarshal(b, s)
+	if err != nil {
+		return nil, err
+	}
+	s.Comments = commentsCount(s.ID)
+	s.LikeCount = likeCount(s.ID)
+	s.Views = viewCount(s.ID)
+	return s, nil
 }
