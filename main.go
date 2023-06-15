@@ -73,7 +73,7 @@ func startAction(cmd *cobra.Command, args []string) error {
 		GET(fmt.Sprintf("/oidc/:%s", util.Provider), oidcRedirect).
 		GET(fmt.Sprintf("/user/:%s", util.UniqueName), profile).
 		GET(fmt.Sprintf("/user/:%s/status", util.UniqueName), userStatus).
-		GET(fmt.Sprintf("/user/status/:%s", util.StatusID), status).
+		GET(fmt.Sprintf("/status/:%s", util.StatusID), status).
 		GET("/explore", explore).
 		GET("/labels", labels)
 
