@@ -130,8 +130,7 @@ func UserStatus(uniqueName, after string, size int64) (ss []*Status) {
 			logrus.Error("not found ", string(kv.Value))
 			continue
 		}
-		s := &Status{}
-		err = json.Unmarshal(r.Kvs[0].Value, s)
+		s, err := unmarshalStatus(r.Kvs[0].Value)
 		if err != nil {
 			logrus.Error(err)
 			continue
