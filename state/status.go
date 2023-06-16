@@ -108,14 +108,18 @@ func GetStatus(statusID string) *Status {
 }
 
 func UserStatus(uniqueName, after string, size int64) (ss []*Status) {
+	return loadStatusByLinker(stateKey(fmt.Sprintf("/%s/status", uniqueName)), after, size)
+}
+
+func loadStatusByLinker(key, after string, size int64) (ss []*Status) {
 	opts := []clientv3.OpOption{
 		clientv3.WithPrefix(),
 		clientv3.WithLimit(size),
 		clientv3.WithSort(clientv3.SortByKey, clientv3.SortDescend)}
 	if len(after) > 0 {
-		opts = append(opts, clientv3.WithRange(stateKey(fmt.Sprintf("%s/status/%s", uniqueName, after))))
+		opts = append(opts, clientv3.WithRange(key+after))
 	}
-	resp, err := etcdClient.KV.Get(context.Background(), stateKey(fmt.Sprintf("/%s/status", uniqueName)), opts...)
+	resp, err := etcdClient.KV.Get(context.Background(), key, opts...)
 	if err != nil {
 		logrus.Debug(err)
 		return
