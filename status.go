@@ -15,23 +15,24 @@ import (
 )
 
 type StatusOptions struct {
-	Content   []state.StatusFragment `json:"content" binding:"required"`
-	RefStatus string                 `json:"prev"`
+	Content   []*state.StatusFragment `json:"content" binding:"required"`
+	RefStatus string                  `json:"prev"`
 }
 
 type Status struct {
-	ID         string                 `json:"id"`
-	Content    []state.StatusFragment `json:"content"`
-	RefStatus  *Status                `json:"prev"`
-	User       *state.ActUser         `json:"user"`
-	CreateTime time.Time              `json:"createTime"`
-	Labels     []string               `json:"labels"`
-	Comments   int64                  `json:"comments"`
-	LikeCount  int64                  `json:"likeCount"`
-	Views      int64                  `json:"views"`
+	ID         string                  `json:"id"`
+	Content    []*state.StatusFragment `json:"content"`
+	RefStatus  *Status                 `json:"prev"`
+	User       *state.ActUser          `json:"user"`
+	CreateTime time.Time               `json:"createTime"`
+	Labels     []string                `json:"labels"`
+	Comments   int64                   `json:"comments"`
+	LikeCount  int64                   `json:"likeCount"`
+	Views      int64                   `json:"views"`
 }
 
 var labelsRegex = regexp.MustCompile(`#([\p{L}\d_]+)`)
+var imageRegex = regexp.MustCompile(`\[img\](https://[^\s\[\]]+)\[/img\]`)
 
 func status(c *gin.Context) {
 	status := chainStatus(c.Param(util.StatusID))
@@ -137,6 +138,7 @@ func newStatus(c *gin.Context) {
 		User:      ssion.ToUser(),
 		Labels:    []string{},
 	}
+	var sf []*state.StatusFragment
 	for _, f := range opts.Content {
 		if f.Type != "text" {
 			continue
@@ -147,7 +149,20 @@ func newStatus(c *gin.Context) {
 				opts.Labels = append(opts.Labels, m[1])
 			}
 		}
+		imgMatches := imageRegex.FindAllStringSubmatch(f.Value, -1)
+		if len(imgMatches) > 0 {
+			f.Type = "img"
+			f.Value = imgMatches[0][1]
+			for _, m := range imgMatches[1:] {
+				sf = append(sf, &state.StatusFragment{
+					Type:  "img",
+					Value: m[1],
+				})
+			}
+		}
 	}
+
+	opts.Content = append(opts.Content, sf...)
 
 	s, err := state.NewStatus(opts)
 	if err != nil {

@@ -14,22 +14,22 @@ import (
 )
 
 type StatusOptions struct {
-	Content   []StatusFragment
+	Content   []*StatusFragment
 	RefStatus string
 	User      *ActUser
 	Labels    []string
 }
 
 type Status struct {
-	ID         string           `json:"id"`
-	Content    []StatusFragment `json:"content"`
-	RefStatus  string           `json:"prev"`
-	User       *ActUser         `json:"user"`
-	CreateTime time.Time        `json:"createTime"`
-	Labels     []string         `json:"labels"`
-	Comments   int64            `json:"comments"`
-	LikeCount  int64            `json:"likeCount"`
-	Views      int64            `json:"views"`
+	ID         string            `json:"id"`
+	Content    []*StatusFragment `json:"content"`
+	RefStatus  string            `json:"prev"`
+	User       *ActUser          `json:"user"`
+	CreateTime time.Time         `json:"createTime"`
+	Labels     []string          `json:"labels"`
+	Comments   int64             `json:"comments"`
+	LikeCount  int64             `json:"likeCount"`
+	Views      int64             `json:"views"`
 }
 
 type StatusFragment struct {
