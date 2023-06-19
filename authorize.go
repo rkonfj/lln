@@ -53,6 +53,10 @@ func authorize(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, err)
 		return
 	}
+	if !claims.Verified {
+		c.JSON(http.StatusInternalServerError, "unverified email")
+		return
+	}
 	sessionObj, err := session.Create(&state.UserOptions{
 		Name:    claims.Name,
 		Picture: claims.Picture,
