@@ -1,94 +1,72 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
+	"github.com/go-chi/chi/v5"
 	"github.com/rkonfj/lln/session"
 	"github.com/rkonfj/lln/state"
 	"github.com/rkonfj/lln/util"
 )
 
-func profile(c *gin.Context) {
-	var ssion *session.Session
-	if s, ok := c.Get(util.KeySession); ok {
-		ssion = s.(*session.Session)
-	}
-	u := state.UserByUniqueName(c.Param(util.UniqueName))
+func profile(w http.ResponseWriter, r *http.Request) {
+	u := state.UserByUniqueName(r.URL.Query().Get(util.UniqueName))
 	if u == nil {
-		c.Status(http.StatusNotFound)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	if ssion == nil {
+
+	if r.Context().Value(util.KeySession) == nil {
 		// privacy
 		u.Email = ""
 		u.Locale = ""
 	}
-	c.JSON(http.StatusOK, u)
+	json.NewEncoder(w).Encode(u)
 }
 
-func likeUser(c *gin.Context) {
-	var ssion *session.Session
-	if s, ok := c.Get(util.KeySession); ok {
-		ssion = s.(*session.Session)
-	} else {
-		c.Status(http.StatusUnauthorized)
-		return
-	}
-	err := state.LikeUser(ssion.ToUser(), c.Param(util.UniqueName))
+func likeUser(w http.ResponseWriter, r *http.Request) {
+	var ssion = r.Context().Value(util.KeySession).(*session.Session)
+	err := state.LikeUser(ssion.ToUser(), chi.URLParam(r, util.UniqueName))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 	}
 }
 
-func changeName(c *gin.Context) {
-	var ssion *session.Session
-	if s, ok := c.Get(util.KeySession); ok {
-		ssion = s.(*session.Session)
-	} else {
-		c.Status(http.StatusUnauthorized)
-		return
-	}
+func changeName(w http.ResponseWriter, r *http.Request) {
+	var ssion = r.Context().Value(util.KeySession).(*session.Session)
 	u := state.UserByID(ssion.ID)
 	if u == nil {
-		c.JSON(http.StatusNotFound, "not found")
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	name := c.Query("name")
-	if len(name) == 0 {
-		c.JSON(http.StatusBadRequest, "invalid name")
-		return
+	name := r.URL.Query().Get("name")
+	if len(name) > 0 {
+		defer session.DefaultSessionManager.Expire(ssion.ID)
+		err := u.ChangeName(name)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+			return
+		}
 	}
-	err := u.ChangeName(name)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, err.Error())
-		return
-	}
-	session.DefaultSessionManager.Expire(ssion.ID)
-}
 
-func changeUniqueName(c *gin.Context) {
-	var ssion *session.Session
-	if s, ok := c.Get(util.KeySession); ok {
-		ssion = s.(*session.Session)
-	} else {
-		c.Status(http.StatusUnauthorized)
+	uniqueName := r.URL.Query().Get("uniqueName")
+	if len(uniqueName) > 0 {
+		defer session.DefaultSessionManager.Expire(ssion.ID)
+		err := u.ChangeUniqueName(name)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+			return
+		}
 		return
 	}
-	u := state.UserByID(ssion.ID)
-	if u == nil {
-		c.JSON(http.StatusNotFound, "not found")
-		return
-	}
-	name := c.Query(util.UniqueName)
+
 	if len(name) == 0 {
-		c.JSON(http.StatusBadRequest, "invalid name")
-		return
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("invalid name"))
 	}
-	err := u.ChangeUniqueName(name)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, err.Error())
-		return
-	}
-	session.DefaultSessionManager.Expire(ssion.ID)
+
 }

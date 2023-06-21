@@ -1,47 +1,37 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
+	"github.com/go-chi/chi/v5"
 	"github.com/rkonfj/lln/session"
 	"github.com/rkonfj/lln/state"
 	"github.com/rkonfj/lln/util"
 )
 
-func bookmarkStatus(c *gin.Context) {
-	var ssion *session.Session
-	if s, ok := c.Get(util.KeySession); ok {
-		ssion = s.(*session.Session)
-	} else {
-		c.Status(http.StatusUnauthorized)
-		return
-	}
-	err := state.BookmarkStatus(ssion.ToUser(), c.Param(util.StatusID))
+func bookmarkStatus(w http.ResponseWriter, r *http.Request) {
+	ssion := r.Context().Value(util.KeySession).(*session.Session)
+	err := state.BookmarkStatus(ssion.ToUser(), chi.URLParam(r, util.StatusID))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 	}
 }
 
-func listBookmarks(c *gin.Context) {
-	var ssion *session.Session
-	if s, ok := c.Get(util.KeySession); ok {
-		ssion = s.(*session.Session)
-	} else {
-		c.Status(http.StatusUnauthorized)
-		return
-	}
+func listBookmarks(w http.ResponseWriter, r *http.Request) {
+	ssion := r.Context().Value(util.KeySession).(*session.Session)
 	size := int64(20)
-	sizeStr := c.Query("size")
+	sizeStr := r.URL.Query().Get("size")
 	var err error
 	if len(sizeStr) > 0 {
 		size, err = strconv.ParseInt(sizeStr, 10, 64)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, err.Error())
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 	}
-	ss := state.ListBookmarks(ssion.ToUser(), c.Query("after"), size)
-	c.JSON(http.StatusOK, ss)
+	ss := state.ListBookmarks(ssion.ToUser(), r.URL.Query().Get("after"), size)
+	json.NewEncoder(w).Encode(ss)
 }

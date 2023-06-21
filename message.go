@@ -2,10 +2,8 @@ package main
 
 import (
 	"net/http"
-
-	"github.com/gin-gonic/gin"
 )
 
-func listMessages(c *gin.Context) {
-	c.JSON(http.StatusOK, nil)
+func listMessages(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
 }

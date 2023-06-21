@@ -1,31 +1,31 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
 	"github.com/rkonfj/lln/session"
 	"github.com/rkonfj/lln/state"
 	"github.com/rkonfj/lln/util"
 )
 
-func explore(c *gin.Context) {
-	sizeStr := c.Query("size")
+func explore(w http.ResponseWriter, r *http.Request) {
+	sizeStr := r.URL.Query().Get("size")
 	size := int64(20)
 	var err error
 	if len(sizeStr) != 0 {
 		size, err = strconv.ParseInt(sizeStr, 10, 64)
 		if err != nil {
-			c.Status(http.StatusBadRequest)
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 	}
 	var user *state.ActUser
-	if s, ok := c.Get(util.KeySession); ok {
-		user = s.(*session.Session).ToUser()
+	if r.Context().Value(util.KeySession) != nil {
+		user = r.Context().Value(util.KeySession).(*session.Session).ToUser()
 	}
-	ss := state.Recommendations(user, c.Query("after"), size)
+	ss := state.Recommendations(user, r.URL.Query().Get("after"), size)
 	var ret []*Status
 	for _, s := range ss {
 		status := castStatus(s)
@@ -35,5 +35,5 @@ func explore(c *gin.Context) {
 		}
 		ret = append(ret, status)
 	}
-	c.JSON(http.StatusOK, ret)
+	json.NewEncoder(w).Encode(ret)
 }

@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
 
-	"github.com/gin-gonic/gin"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/rkonfj/lln/session"
 	"github.com/rkonfj/lln/state"
 	"github.com/rkonfj/lln/util"
@@ -38,9 +40,6 @@ func initAction(cmd *cobra.Command, args []string) error {
 	logrus.SetLevel(ll)
 	logrus.SetOutput(os.Stdout)
 	logrus.SetFormatter(&logrus.TextFormatter{FullTimestamp: true, DisableColors: true})
-	if ll != logrus.DebugLevel {
-		gin.SetMode(gin.ReleaseMode)
-	}
 
 	configPath, err := cmd.Flags().GetString("config")
 	if err != nil {
@@ -60,54 +59,59 @@ func initAction(cmd *cobra.Command, args []string) error {
 }
 
 func startAction(cmd *cobra.Command, args []string) error {
-	r := gin.Default()
+	r := chi.NewRouter()
+	r.Use(middleware.Logger)
+	r.Use(middleware.RealIP)
 
-	r.Group("/i").Use(security).Use(common).
-		POST(fmt.Sprintf("/like/status/:%s", util.StatusID), likeStatus).
-		POST(fmt.Sprintf("/like/user/:%s", util.UniqueName), likeUser).
-		POST(fmt.Sprintf("/bookmark/status/:%s", util.StatusID), bookmarkStatus).
-		POST("/status", newStatus).
-		PUT("/name", changeName).
-		PUT(fmt.Sprintf("/%s", util.UniqueName), changeUniqueName).
-		GET("/bookmarks", listBookmarks).
-		GET("/messages", listMessages)
+	r.Route("/i", func(r chi.Router) {
+		r.Use(security, common)
+		r.Post(fmt.Sprintf("/like/status/{%s}", util.StatusID), likeStatus)
+		r.Post(fmt.Sprintf("/like/user/{%s}", util.UniqueName), likeUser)
+		r.Post(fmt.Sprintf("/bookmark/status/{%s}", util.StatusID), bookmarkStatus)
+		r.Post("/status", newStatus)
+		r.Put("/name", changeName)
+		r.Get("/bookmarks", listBookmarks)
+		r.Get("/messages", listMessages)
+	})
 
-	r.Group("/o").Use(common).
-		POST(fmt.Sprintf("/authorize/:%s", util.Provider), authorize).
-		GET(fmt.Sprintf("/authorize/:%s", util.Provider), authorize).
-		GET(fmt.Sprintf("/oidc/:%s", util.Provider), oidcRedirect).
-		GET(fmt.Sprintf("/user/:%s", util.UniqueName), profile).
-		GET(fmt.Sprintf("/user/:%s/status", util.UniqueName), userStatus).
-		GET(fmt.Sprintf("/status/:%s", util.StatusID), status).
-		GET(fmt.Sprintf("/status/:%s/comments", util.StatusID), statusComments).
-		GET("/explore", explore).
-		GET("/labels", labels)
-
-	return r.Run(config.Listen)
+	r.Route("/o", func(r chi.Router) {
+		r.Use(common)
+		r.Post(fmt.Sprintf("/authorize/{%s}", util.Provider), authorize)
+		r.Get(fmt.Sprintf("/authorize/{%s}", util.Provider), authorize)
+		r.Get(fmt.Sprintf("/oidc/{%s}", util.Provider), oidcRedirect)
+		r.Get(fmt.Sprintf("/user/{%s}", util.UniqueName), profile)
+		r.Get(fmt.Sprintf("/user/{%s}/status", util.UniqueName), userStatus)
+		r.Get(fmt.Sprintf("/status/{%s}", util.StatusID), status)
+		r.Get(fmt.Sprintf("/status/{%s}/comments", util.StatusID), statusComments)
+		r.Get("/explore", explore)
+		r.Get("/labels", labels)
+	})
+	return http.ListenAndServe(config.Listen, r)
 }
 
-func security(c *gin.Context) {
-	apiKey := c.GetHeader("Authorization")
-	if len(apiKey) == 0 {
-		c.Status(http.StatusUnauthorized)
-		c.Abort()
-		return
+func security(h http.Handler) http.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		apiKey := r.Header.Get("Authorization")
+		if len(apiKey) == 0 {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		ssion := session.DefaultSessionManager.Load(apiKey)
+		if ssion == nil {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		h.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), util.KeySession, ssion)))
 	}
-	ssion := session.DefaultSessionManager.Load(apiKey)
-	if ssion == nil {
-		c.Status(http.StatusUnauthorized)
-		c.Abort()
-		return
-	}
-	c.Set(util.KeySession, ssion)
+	return http.HandlerFunc(fn)
 }
 
-func common(c *gin.Context) {
-	apiKey := c.GetHeader("Authorization")
-	if len(apiKey) == 0 {
-		c.Header("X-Session-Valid", "false")
-		return
+func common(h http.Handler) http.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		apiKey := r.Header.Get("Authorization")
+		w.Header().Add("X-Session-Valid", fmt.Sprintf("%t", len(apiKey) > 0 &&
+			session.DefaultSessionManager.Load(apiKey) != nil))
+		h.ServeHTTP(w, r)
 	}
-	ssion := session.DefaultSessionManager.Load(apiKey)
-	c.Header("X-Session-Valid", fmt.Sprintf("%t", ssion != nil))
+	return http.HandlerFunc(fn)
 }

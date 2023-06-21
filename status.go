@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -8,7 +9,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/gin-gonic/gin"
+	"github.com/go-chi/chi/v5"
 	"github.com/rkonfj/lln/session"
 	"github.com/rkonfj/lln/state"
 	"github.com/rkonfj/lln/util"
@@ -34,28 +35,29 @@ type Status struct {
 var labelsRegex = regexp.MustCompile(`#([\p{L}\d_]+)`)
 var imageRegex = regexp.MustCompile(`\[img\](https://[^\s\[\]]+)\[/img\]`)
 
-func status(c *gin.Context) {
-	status := chainStatus(c.Param(util.StatusID))
+func status(w http.ResponseWriter, r *http.Request) {
+	status := chainStatus(chi.URLParam(r, util.StatusID))
 	if status == nil {
-		c.Status(http.StatusNotFound)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	c.JSON(http.StatusOK, status)
+	json.NewEncoder(w).Encode(status)
 }
 
-func statusComments(c *gin.Context) {
+func statusComments(w http.ResponseWriter, r *http.Request) {
 	size := int64(20)
-	sizeStr := c.Query("size")
+	sizeStr := r.URL.Query().Get("size")
 	var err error
 	if len(sizeStr) > 0 {
 		size, err = strconv.ParseInt(sizeStr, 10, 64)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, err.Error())
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(err.Error()))
 			return
 		}
 	}
-	comments := state.StatusComments(c.Param(util.StatusID), c.Query("after"), size)
-	c.JSON(http.StatusOK, comments)
+	comments := state.StatusComments(chi.URLParam(r, util.StatusID), r.URL.Query().Get("after"), size)
+	json.NewEncoder(w).Encode(comments)
 }
 
 func chainStatus(statusID string) *Status {
@@ -70,18 +72,19 @@ func chainStatus(statusID string) *Status {
 	return s
 }
 
-func userStatus(c *gin.Context) {
-	sizeStr := c.Query("size")
+func userStatus(w http.ResponseWriter, r *http.Request) {
+	sizeStr := r.URL.Query().Get("size")
 	size := int64(20)
 	var err error
 	if len(sizeStr) > 0 {
 		size, err = strconv.ParseInt(sizeStr, 10, 64)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, err.Error())
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(err.Error()))
 			return
 		}
 	}
-	ss := state.UserStatus(c.Param(util.UniqueName), c.Query("after"), size)
+	ss := state.UserStatus(chi.URLParam(r, util.UniqueName), r.URL.Query().Get("after"), size)
 	var ret []*Status
 	for _, s := range ss {
 		status := castStatus(s)
@@ -91,43 +94,39 @@ func userStatus(c *gin.Context) {
 		}
 		ret = append(ret, status)
 	}
-	c.JSON(http.StatusOK, ret)
+	json.NewEncoder(w).Encode(ret)
 }
 
-func likeStatus(c *gin.Context) {
-	var ssion *session.Session
-	if s, ok := c.Get(util.KeySession); ok {
-		ssion = s.(*session.Session)
-	} else {
-		c.Status(http.StatusUnauthorized)
-		return
-	}
-	err := state.LikeStatus(ssion.ToUser(), c.Param(util.StatusID))
+func likeStatus(w http.ResponseWriter, r *http.Request) {
+	var ssion = r.Context().Value(util.KeySession).(*session.Session)
+	err := state.LikeStatus(ssion.ToUser(), chi.URLParam(r, util.StatusID))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 	}
 }
 
-func newStatus(c *gin.Context) {
-	var ssion *session.Session
-	if s, ok := c.Get(util.KeySession); ok {
-		ssion = s.(*session.Session)
-	} else {
-		c.Status(http.StatusUnauthorized)
-		return
-	}
+func newStatus(w http.ResponseWriter, r *http.Request) {
+	var ssion = r.Context().Value(util.KeySession).(*session.Session)
 	req := &StatusOptions{}
-	err := c.BindJSON(req)
+	err := json.NewDecoder(r.Body).Decode(req)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	if req.Content == nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("content is required"))
 		return
 	}
 
 	for _, f := range req.Content {
 		count := utf8.RuneCountInString(f.Value)
 		if count > 380 {
-			c.JSON(http.StatusBadRequest,
-				fmt.Sprintf("maximum 380 unicode characters per paragraph, %d", count))
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(fmt.Sprintf("maximum 380 unicode characters per paragraph, %d", count)))
 			return
 		}
 	}
@@ -166,10 +165,11 @@ func newStatus(c *gin.Context) {
 
 	s, err := state.NewStatus(opts)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 		return
 	}
-	c.JSON(http.StatusOK, s)
+	json.NewEncoder(w).Encode(s)
 }
 
 func castStatus(s *state.Status) *Status {

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/decred/base58"
+	"github.com/rkonfj/lln/util"
 	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -59,6 +60,8 @@ func (u *User) ChangeName(newName string) error {
 
 func (u *User) ChangeUniqueName(newUniqueName string) error {
 	key := stateKey(fmt.Sprintf("/user/%s", u.ID))
+	uniqueNameKey := stateKey(fmt.Sprintf("/%s/%s", util.UniqueName, newUniqueName))
+	oldUniqueNameKey := stateKey(fmt.Sprintf("/%s/%s", util.UniqueName, u.UniqueName))
 	resp, err := etcdClient.KV.Get(context.Background(), key)
 	if err != nil {
 		return err
@@ -81,7 +84,10 @@ func (u *User) ChangeUniqueName(newUniqueName string) error {
 
 	txnResp, err := etcdClient.Txn(context.Background()).
 		If(clientv3.Compare(clientv3.ModRevision(key), "=", resp.Kvs[0].ModRevision)).
-		Then(clientv3.OpPut(key, string(b))).Commit()
+		Then(clientv3.OpPut(key, string(b)),
+			clientv3.OpDelete(oldUniqueNameKey),
+			clientv3.OpPut(uniqueNameKey, key)).
+		Commit()
 	if err != nil {
 		return err
 	}
@@ -110,7 +116,8 @@ func UserByEmail(email string) *User {
 }
 
 func UserByID(userID string) *User {
-	return castUser(getPointerValue(stateKey(fmt.Sprintf("/user/%s", userID))))
+	resp, err := etcdClient.KV.Get(context.Background(), stateKey(fmt.Sprintf("/user/%s", userID)))
+	return castUser(resp, err)
 }
 
 func UserByUniqueName(uniqueName string) *User {
