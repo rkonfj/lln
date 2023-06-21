@@ -52,10 +52,10 @@ func changeName(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	uniqueName := r.URL.Query().Get("uniqueName")
+	uniqueName := r.URL.Query().Get(util.UniqueName)
 	if len(uniqueName) > 0 {
 		defer session.DefaultSessionManager.Expire(ssion.ID)
-		err := u.ChangeUniqueName(name)
+		err := u.ChangeUniqueName(uniqueName)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
