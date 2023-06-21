@@ -30,16 +30,19 @@ func (s *Session) ToUser() *state.ActUser {
 type SessionManager interface {
 	Create(*Session) error
 	Load(string) *Session
+	Expire(string) error
 }
 
 type MemorySessionManger struct {
-	lock    sync.RWMutex
-	session map[string]*Session
+	lock       sync.RWMutex
+	session    map[string]*Session
+	revSession map[string][]string
 }
 
 func NewSessionManager() *MemorySessionManger {
 	return &MemorySessionManger{
-		session: make(map[string]*Session),
+		session:    make(map[string]*Session),
+		revSession: make(map[string][]string),
 	}
 }
 
@@ -50,9 +53,22 @@ func (sm *MemorySessionManger) Create(s *Session) error {
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 	sm.session[s.ApiKey] = s
+	sm.revSession[s.ID] = append(sm.revSession[s.ID], s.ApiKey)
 	return nil
 }
 
 func (sm *MemorySessionManger) Load(key string) *Session {
 	return sm.session[key]
+}
+
+func (sm *MemorySessionManger) Expire(userID string) error {
+	sm.lock.Lock()
+	defer sm.lock.Unlock()
+	if apiKeys, ok := sm.revSession[userID]; ok {
+		for _, key := range apiKeys {
+			delete(sm.session, key)
+		}
+		delete(sm.revSession, userID)
+	}
+	return nil
 }

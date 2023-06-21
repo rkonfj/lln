@@ -67,6 +67,8 @@ func startAction(cmd *cobra.Command, args []string) error {
 		POST(fmt.Sprintf("/like/user/:%s", util.UniqueName), likeUser).
 		POST(fmt.Sprintf("/bookmark/status/:%s", util.StatusID), bookmarkStatus).
 		POST("/status", newStatus).
+		PUT("/name", changeName).
+		PUT(fmt.Sprintf("/%s", util.UniqueName), changeUniqueName).
 		GET("/bookmarks", listBookmarks).
 		GET("/messages", listMessages)
 

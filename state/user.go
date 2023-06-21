@@ -23,6 +23,74 @@ type User struct {
 	CreateTime time.Time `json:"createTime"`
 }
 
+func (u *User) ChangeName(newName string) error {
+	key := stateKey(fmt.Sprintf("/user/%s", u.ID))
+	resp, err := etcdClient.KV.Get(context.Background(), key)
+	if err != nil {
+		return err
+	}
+	if len(resp.Kvs) == 0 {
+		return errors.New("not found")
+	}
+
+	err = json.Unmarshal(resp.Kvs[0].Value, u)
+	if err != nil {
+		return err
+	}
+
+	u.Name = newName
+
+	b, err := json.Marshal(u)
+	if err != nil {
+		return err
+	}
+
+	txnResp, err := etcdClient.Txn(context.Background()).
+		If(clientv3.Compare(clientv3.ModRevision(key), "=", resp.Kvs[0].ModRevision)).
+		Then(clientv3.OpPut(key, string(b))).Commit()
+	if err != nil {
+		return err
+	}
+	if !txnResp.Succeeded {
+		return errors.New("failed. data mod rev not doesn't match")
+	}
+	return nil
+}
+
+func (u *User) ChangeUniqueName(newUniqueName string) error {
+	key := stateKey(fmt.Sprintf("/user/%s", u.ID))
+	resp, err := etcdClient.KV.Get(context.Background(), key)
+	if err != nil {
+		return err
+	}
+	if len(resp.Kvs) == 0 {
+		return errors.New("not found")
+	}
+
+	err = json.Unmarshal(resp.Kvs[0].Value, u)
+	if err != nil {
+		return err
+	}
+
+	u.UniqueName = newUniqueName
+
+	b, err := json.Marshal(u)
+	if err != nil {
+		return err
+	}
+
+	txnResp, err := etcdClient.Txn(context.Background()).
+		If(clientv3.Compare(clientv3.ModRevision(key), "=", resp.Kvs[0].ModRevision)).
+		Then(clientv3.OpPut(key, string(b))).Commit()
+	if err != nil {
+		return err
+	}
+	if !txnResp.Succeeded {
+		return errors.New("failed. data mod rev not doesn't match")
+	}
+	return nil
+}
+
 type ActUser struct {
 	ID         string `json:"id"`
 	UniqueName string `json:"uniqueName"`
@@ -39,6 +107,10 @@ type UserOptions struct {
 
 func UserByEmail(email string) *User {
 	return castUser(getPointerValue(stateKey(fmt.Sprintf("/email/%s", email))))
+}
+
+func UserByID(userID string) *User {
+	return castUser(getPointerValue(stateKey(fmt.Sprintf("/user/%s", userID))))
 }
 
 func UserByUniqueName(uniqueName string) *User {

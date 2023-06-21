@@ -40,3 +40,55 @@ func likeUser(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, err.Error())
 	}
 }
+
+func changeName(c *gin.Context) {
+	var ssion *session.Session
+	if s, ok := c.Get(util.KeySession); ok {
+		ssion = s.(*session.Session)
+	} else {
+		c.Status(http.StatusUnauthorized)
+		return
+	}
+	u := state.UserByID(ssion.ID)
+	if u == nil {
+		c.JSON(http.StatusNotFound, "not found")
+		return
+	}
+	name := c.Query("name")
+	if len(name) == 0 {
+		c.JSON(http.StatusBadRequest, "invalid name")
+		return
+	}
+	err := u.ChangeName(name)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, err.Error())
+		return
+	}
+	session.DefaultSessionManager.Expire(ssion.ID)
+}
+
+func changeUniqueName(c *gin.Context) {
+	var ssion *session.Session
+	if s, ok := c.Get(util.KeySession); ok {
+		ssion = s.(*session.Session)
+	} else {
+		c.Status(http.StatusUnauthorized)
+		return
+	}
+	u := state.UserByID(ssion.ID)
+	if u == nil {
+		c.JSON(http.StatusNotFound, "not found")
+		return
+	}
+	name := c.Query(util.UniqueName)
+	if len(name) == 0 {
+		c.JSON(http.StatusBadRequest, "invalid name")
+		return
+	}
+	err := u.ChangeUniqueName(name)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, err.Error())
+		return
+	}
+	session.DefaultSessionManager.Expire(ssion.ID)
+}
