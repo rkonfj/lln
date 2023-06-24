@@ -25,6 +25,9 @@ type User struct {
 }
 
 func (u *User) ChangeName(newName string) error {
+	if u.Name == newName {
+		return nil
+	}
 	key := stateKey(fmt.Sprintf("/user/%s", u.ID))
 	resp, err := etcdClient.KV.Get(context.Background(), key)
 	if err != nil {
@@ -59,6 +62,9 @@ func (u *User) ChangeName(newName string) error {
 }
 
 func (u *User) ChangeUniqueName(newUniqueName string) error {
+	if u.UniqueName == newUniqueName {
+		return nil
+	}
 	key := stateKey(fmt.Sprintf("/user/%s", u.ID))
 	uniqueNameKey := stateKey(fmt.Sprintf("/%s/%s", util.UniqueName, newUniqueName))
 	oldUniqueNameKey := stateKey(fmt.Sprintf("/%s/%s", util.UniqueName, u.UniqueName))
@@ -83,7 +89,8 @@ func (u *User) ChangeUniqueName(newUniqueName string) error {
 	}
 
 	txnResp, err := etcdClient.Txn(context.Background()).
-		If(clientv3.Compare(clientv3.ModRevision(key), "=", resp.Kvs[0].ModRevision)).
+		If(clientv3.Compare(clientv3.ModRevision(key), "=", resp.Kvs[0].ModRevision),
+			clientv3.Compare(clientv3.Version(uniqueNameKey), "=", 0)).
 		Then(clientv3.OpPut(key, string(b)),
 			clientv3.OpDelete(oldUniqueNameKey),
 			clientv3.OpPut(uniqueNameKey, key)).
@@ -92,9 +99,13 @@ func (u *User) ChangeUniqueName(newUniqueName string) error {
 		return err
 	}
 	if !txnResp.Succeeded {
-		return errors.New("failed. data mod rev not doesn't match")
+		return errors.New("failed. unique name already exists")
 	}
 	return nil
+}
+
+func (u *User) ListStatus(after string, size int64) (ss []*Status) {
+	return loadStatusByLinker(stateKey(fmt.Sprintf("/%s/status/", u.ID)), after, size)
 }
 
 type ActUser struct {

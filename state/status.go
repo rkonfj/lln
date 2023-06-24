@@ -54,15 +54,10 @@ func NewStatus(opts *StatusOptions) (*Status, error) {
 	txn := etcdClient.Txn(context.Background())
 	statusKey := stateKey(fmt.Sprintf("/status/%s", s.ID))
 	userStatusKey := stateKey(fmt.Sprintf("/%s/status/%s", s.User.ID, s.ID))
-	userUniqueNameKey := stateKey(fmt.Sprintf("/%s/status/%s", s.User.UniqueName, s.ID))
 	statusCommentsKey := stateKey(fmt.Sprintf("/comments/status/%s/%s", s.RefStatus, s.ID))
 	ops := []clientv3.Op{
 		clientv3.OpPut(statusKey, string(b)),
 		clientv3.OpPut(userStatusKey, statusKey),
-	}
-
-	if userStatusKey != userUniqueNameKey {
-		ops = append(ops, clientv3.OpPut(userUniqueNameKey, statusKey))
 	}
 
 	if len(s.RefStatus) > 0 {
@@ -107,8 +102,8 @@ func GetStatus(statusID string) *Status {
 	return s
 }
 
-func UserStatus(uniqueName, after string, size int64) (ss []*Status) {
-	return loadStatusByLinker(stateKey(fmt.Sprintf("/%s/status", uniqueName)), after, size)
+func UserStatus(uniqueName, after string, size int64) []*Status {
+	return UserByUniqueName(uniqueName).ListStatus(after, size)
 }
 
 func loadStatusByLinker(key, after string, size int64) (ss []*Status) {

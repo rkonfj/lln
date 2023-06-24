@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/rkonfj/lln/session"
@@ -11,7 +12,7 @@ import (
 )
 
 func profile(w http.ResponseWriter, r *http.Request) {
-	u := state.UserByUniqueName(r.URL.Query().Get(util.UniqueName))
+	u := state.UserByUniqueName(chi.URLParam(r, util.UniqueName))
 	if u == nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -34,6 +35,7 @@ func likeUser(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// changeName change name action or unique name action, only one action is atomic
 func changeName(w http.ResponseWriter, r *http.Request) {
 	var ssion = r.Context().Value(util.KeySession).(*session.Session)
 	u := state.UserByID(ssion.ID)
@@ -41,7 +43,7 @@ func changeName(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	name := r.URL.Query().Get("name")
+	name := strings.TrimSpace(r.URL.Query().Get("name"))
 	if len(name) > 0 {
 		defer session.DefaultSessionManager.Expire(ssion.ID)
 		err := u.ChangeName(name)
@@ -52,21 +54,23 @@ func changeName(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	uniqueName := r.URL.Query().Get(util.UniqueName)
+	uniqueName := strings.TrimSpace(r.URL.Query().Get(util.UniqueName))
 	if len(uniqueName) > 0 {
 		defer session.DefaultSessionManager.Expire(ssion.ID)
 		err := u.ChangeUniqueName(uniqueName)
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
+			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte(err.Error()))
 			return
 		}
+		state.UserChanged <- u
 		return
 	}
 
 	if len(name) == 0 {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("invalid name"))
+	} else {
+		state.UserChanged <- u
 	}
-
 }
