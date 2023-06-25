@@ -72,6 +72,8 @@ func startAction(cmd *cobra.Command, args []string) error {
 		r.Put("/name", changeName)
 		r.Get("/bookmarks", listBookmarks)
 		r.Get("/messages", listMessages)
+		r.Get("/messages/tips", getNewTipMessages)
+		r.Delete("/messages/tips", deleteTipMessages)
 	})
 
 	r.Route("/o", func(r chi.Router) {

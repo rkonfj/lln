@@ -37,6 +37,15 @@ type StatusFragment struct {
 	Type  string `json:"type"`
 }
 
+func (s *Status) Overview() string {
+	for _, c := range s.Content {
+		if c.Type == "text" {
+			return c.Value
+		}
+	}
+	return ""
+}
+
 func NewStatus(opts *StatusOptions) (*Status, error) {
 	s := &Status{
 		ID:         base58.Encode(xid.New().Bytes()),
@@ -62,6 +71,16 @@ func NewStatus(opts *StatusOptions) (*Status, error) {
 
 	if len(s.RefStatus) > 0 {
 		ops = append(ops, clientv3.OpPut(statusCommentsKey, statusKey))
+		s := GetStatus(s.RefStatus)
+		if s != nil {
+			ops = append(ops, newMessageOps(MsgOptions{
+				from:     opts.User,
+				toUID:    s.User.ID,
+				msgType:  MsgTypeComment,
+				targetID: s.ID,
+				message:  s.Overview(),
+			})...)
+		}
 	}
 
 	if len(s.Labels) > 0 {
@@ -145,10 +164,23 @@ func LikeStatus(user *ActUser, statusID string) error {
 	if err != nil {
 		return err
 	}
+	s := GetStatus(statusID)
+	if s == nil {
+		return ErrStatusNotFound
+	}
+	ops := []clientv3.Op{clientv3.OpPut(statusLikeSetKey, string(b))}
+	ops = append(ops, newMessageOps(MsgOptions{
+		from:     user,
+		toUID:    s.User.ID,
+		msgType:  MsgTypeLike,
+		targetID: s.ID,
+		message:  s.Overview(),
+	})...)
+
 	_, err = etcdClient.Txn(context.Background()).
 		If(clientv3.Compare(clientv3.Version(statusLikeSetKey), ">", 0)).
 		Then(clientv3.OpDelete(statusLikeSetKey)).
-		Else(clientv3.OpPut(statusLikeSetKey, string(b))).
+		Else(ops...).
 		Commit()
 	return err
 }
