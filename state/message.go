@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/decred/base58"
 	"github.com/rs/xid"
@@ -18,11 +19,12 @@ var (
 )
 
 type Message struct {
-	ID       string   `json:"id"`
-	Message  string   `json:"message,omitempty"`
-	From     *ActUser `json:"from"`
-	Type     string   `json:"type"`
-	TargetID string   `json:"targetID"`
+	ID         string    `json:"id"`
+	Message    string    `json:"message,omitempty"`
+	From       *ActUser  `json:"from"`
+	Type       string    `json:"type"`
+	TargetID   string    `json:"targetID"`
+	CreateTime time.Time `json:"createTime"`
 }
 
 func ListMessages(user *ActUser, after string, size int64) (msgs []*Message) {
@@ -87,11 +89,12 @@ type MsgOptions struct {
 
 func newMessageOps(opts MsgOptions) []clientv3.Op {
 	msg := Message{
-		ID:       base58.Encode(xid.New().Bytes()),
-		From:     opts.from,
-		Type:     opts.msgType,
-		Message:  opts.message,
-		TargetID: opts.targetID,
+		ID:         base58.Encode(xid.New().Bytes()),
+		From:       opts.from,
+		Type:       opts.msgType,
+		Message:    opts.message,
+		TargetID:   opts.targetID,
+		CreateTime: time.Now(),
 	}
 	msgB, _ := json.Marshal(msg)
 	msgKey := stateKey(fmt.Sprintf("/message/%s/%s", opts.toUID, msg.ID))
