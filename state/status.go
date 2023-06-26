@@ -225,6 +225,14 @@ func Recommendations(user *ActUser, after string, size int64) (ss []*Status) {
 	return
 }
 
+func ListStatusByLabel(value, after string, size int64) []*Status {
+	return loadStatusByLinker(stateKey(fmt.Sprintf("/labels/%s/status/", value)), after, size)
+}
+
+func ListStatusByKeyword(value, after string, size int64) []*Status {
+	return nil
+}
+
 func unmarshalStatus(b []byte) (s *Status, err error) {
 	s = &Status{}
 	err = json.Unmarshal(b, s)
