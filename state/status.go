@@ -18,6 +18,7 @@ type StatusOptions struct {
 	RefStatus string
 	User      *ActUser
 	Labels    []string
+	At        []string
 }
 
 type Status struct {
@@ -80,6 +81,21 @@ func NewStatus(opts *StatusOptions) (*Status, error) {
 				targetID: s.ID,
 				message:  s.Overview(),
 			})...)
+		}
+	}
+
+	if len(opts.At) > 0 {
+		for _, at := range util.Unique(opts.At) {
+			u := UserByUniqueName(at)
+			if u != nil {
+				ops = append(ops, newMessageOps(MsgOptions{
+					from:     opts.User,
+					toUID:    u.ID,
+					msgType:  MsgTypeAt,
+					targetID: s.ID,
+					message:  s.Overview(),
+				})...)
+			}
 		}
 	}
 

@@ -35,6 +35,7 @@ type Status struct {
 var labelsRegex = regexp.MustCompile(`#([\p{L}\d_]+)`)
 var imageRegex = regexp.MustCompile(`\[img\](https://[^\s\[\]]+)\[/img\]`)
 var breaklineRegex = regexp.MustCompile(`\n\n+`)
+var atRegex = regexp.MustCompile(`@([\p{L}\d_]+)`)
 
 func status(w http.ResponseWriter, r *http.Request) {
 	status := chainStatus(chi.URLParam(r, util.StatusID))
@@ -143,14 +144,26 @@ func newStatus(w http.ResponseWriter, r *http.Request) {
 		if f.Type != "text" {
 			continue
 		}
+		// process labels
 		matches := labelsRegex.FindAllStringSubmatch(f.Value, -1)
 		if len(matches) > 0 {
 			for _, m := range matches {
 				opts.Labels = append(opts.Labels, m[1])
 			}
 		}
+
+		// process @
+		atMatches := atRegex.FindAllStringSubmatch(f.Value, -1)
+		if len(atMatches) > 0 {
+			for _, m := range atMatches {
+				opts.At = append(opts.At, m[1])
+			}
+		}
+
+		// process breaklines
 		f.Value = breaklineRegex.ReplaceAllString(f.Value, "\n\n")
 
+		// process media images
 		imgMatches := imageRegex.FindAllStringSubmatch(f.Value, -1)
 		if len(imgMatches) > 0 {
 			f.Type = "img"
