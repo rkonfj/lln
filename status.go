@@ -194,7 +194,6 @@ func castStatus(s *state.Status) *Status {
 		Content:    s.Content,
 		User:       s.User,
 		CreateTime: s.CreateTime,
-		Labels:     s.Labels,
 		Comments:   s.Comments,
 		Views:      s.Views,
 		LikeCount:  s.LikeCount,

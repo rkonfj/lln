@@ -27,7 +27,6 @@ type Status struct {
 	RefStatus  string            `json:"prev"`
 	User       *ActUser          `json:"user"`
 	CreateTime time.Time         `json:"createTime"`
-	Labels     []string          `json:"labels"`
 	Comments   int64             `json:"comments"`
 	LikeCount  int64             `json:"likeCount"`
 	Views      int64             `json:"views"`
@@ -54,7 +53,6 @@ func NewStatus(opts *StatusOptions) (*Status, error) {
 		RefStatus:  opts.RefStatus,
 		User:       opts.User,
 		CreateTime: time.Now(),
-		Labels:     opts.Labels,
 	}
 	b, err := json.Marshal(s)
 	if err != nil {
@@ -99,8 +97,8 @@ func NewStatus(opts *StatusOptions) (*Status, error) {
 		}
 	}
 
-	if len(s.Labels) > 0 {
-		for _, l := range util.Unique(s.Labels) {
+	if len(opts.Labels) > 0 {
+		for _, l := range util.Unique(opts.Labels) {
 			key := stateKey(fmt.Sprintf("/labels/%s/status/%s", l, s.ID))
 			ops = append(ops, clientv3.OpPut(key, statusKey))
 			key = stateKey(fmt.Sprintf("/label/%s", l))
