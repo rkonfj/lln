@@ -60,8 +60,8 @@ func initAction(cmd *cobra.Command, args []string) error {
 
 func startAction(cmd *cobra.Command, args []string) error {
 	r := chi.NewRouter()
-	r.Use(middleware.Logger)
 	r.Use(middleware.RealIP)
+	r.Use(middleware.Logger)
 
 	r.Route("/i", func(r chi.Router) {
 		r.Use(security, common)
