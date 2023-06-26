@@ -30,6 +30,7 @@ type Status struct {
 	Comments   int64             `json:"comments"`
 	LikeCount  int64             `json:"likeCount"`
 	Views      int64             `json:"views"`
+	Bookmarks  int64             `json:"bookmarks"`
 }
 
 type StatusFragment struct {
@@ -240,5 +241,6 @@ func unmarshalStatus(b []byte) (s *Status, err error) {
 	s.Comments = commentsCount(s.ID)
 	s.LikeCount = likeCount(s.ID)
 	s.Views = viewCount(s.ID)
+	s.Bookmarks = bookmarkCount(s.ID)
 	return s, nil
 }

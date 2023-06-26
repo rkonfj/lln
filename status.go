@@ -26,10 +26,10 @@ type Status struct {
 	RefStatus  *Status                 `json:"prev"`
 	User       *state.ActUser          `json:"user"`
 	CreateTime time.Time               `json:"createTime"`
-	Labels     []string                `json:"labels"`
 	Comments   int64                   `json:"comments"`
 	LikeCount  int64                   `json:"likeCount"`
 	Views      int64                   `json:"views"`
+	Bookmarks  int64                   `json:"bookmarks"`
 }
 
 var labelsRegex = regexp.MustCompile(`#([\p{L}\d_]+)`)
@@ -197,5 +197,6 @@ func castStatus(s *state.Status) *Status {
 		Comments:   s.Comments,
 		Views:      s.Views,
 		LikeCount:  s.LikeCount,
+		Bookmarks:  s.Bookmarks,
 	}
 }

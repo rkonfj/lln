@@ -53,6 +53,10 @@ func likeCount(statusID string) int64 {
 	return countKeys(stateKey(fmt.Sprintf("/like/status/%s/", statusID)))
 }
 
+func bookmarkCount(statusID string) int64 {
+	return countKeys(stateKey(fmt.Sprintf("/bookmark/status/%s/", statusID)))
+}
+
 func viewCount(statusID string) int64 {
 	return countKeys(stateKey(fmt.Sprintf("/view/status/%s/", statusID)))
 }
