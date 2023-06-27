@@ -77,7 +77,7 @@ func keepRecommendedStatusLoop() {
 		clientv3.WithLimit(1024),
 		clientv3.WithPrefix(),
 		clientv3.WithSort(clientv3.SortByCreateRevision, clientv3.SortAscend)}
-	if lastStatus.Count > 0 {
+	if len(lastStatus.Kvs) > 0 {
 		opts = append(opts, clientv3.WithRange(stateKey(fmt.Sprintf("/status/%s", lastStatus.Kvs[0].Value))))
 	}
 	resp, err := etcdClient.KV.Get(context.Background(), stateKey("/status/"), opts...)
@@ -117,6 +117,9 @@ func keepRecommendedStatusLoop() {
 }
 
 func recommend(s *Status) error {
+	if len(s.User.Picture) == 0 {
+		return nil
+	}
 	statusKey := stateKey(fmt.Sprintf("/status/%s", s.ID))
 	putKey := stateKey(fmt.Sprintf("/recommended/status/%s", s.ID))
 	if len(s.RefStatus) > 0 {

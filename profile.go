@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -12,7 +13,13 @@ import (
 )
 
 func profile(w http.ResponseWriter, r *http.Request) {
-	u := state.UserByUniqueName(chi.URLParam(r, util.UniqueName))
+	uniqueName, err := url.PathUnescape(chi.URLParam(r, util.UniqueName))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	u := state.UserByUniqueName(uniqueName)
 	if u == nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -28,7 +35,13 @@ func profile(w http.ResponseWriter, r *http.Request) {
 
 func likeUser(w http.ResponseWriter, r *http.Request) {
 	var ssion = r.Context().Value(util.KeySession).(*session.Session)
-	err := state.LikeUser(ssion.ToUser(), chi.URLParam(r, util.UniqueName))
+	uniqueName, err := url.PathUnescape(chi.URLParam(r, util.UniqueName))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	err = state.LikeUser(ssion.ToUser(), uniqueName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))

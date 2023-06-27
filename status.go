@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"time"
@@ -95,7 +96,13 @@ func userStatus(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	ss := state.UserStatus(chi.URLParam(r, util.UniqueName), r.URL.Query().Get("after"), size)
+	uniqueName, err := url.PathUnescape(chi.URLParam(r, util.UniqueName))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	ss := state.UserStatus(uniqueName, r.URL.Query().Get("after"), size)
 	sessionUID := r.Context().Value(util.KeySessionUID).(string)
 	var ret []*Status
 	for _, s := range ss {
