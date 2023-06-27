@@ -89,10 +89,14 @@ func keepRecommendedStatusLoop() {
 	for _, kv := range resp.Kvs {
 		s, err := unmarshalStatus(kv.Value)
 		if err != nil {
-			logrus.Debug(err)
+			logrus.Error(err)
 			continue
 		}
-		recommend(s)
+		err = recommend(s)
+		if err != nil {
+			logrus.Error(err)
+			continue
+		}
 	}
 
 	logrus.Infof("keepRecommendedStatusLoop process %d status successfully", resp.Count)
@@ -100,7 +104,7 @@ func keepRecommendedStatusLoop() {
 	rch := etcdClient.Watch(context.Background(), stateKey("/status/"), clientv3.WithPrefix())
 	for wresp := range rch {
 		for _, ev := range wresp.Events {
-			if ev.Type == clientv3.EventTypePut {
+			if ev.IsCreate() {
 				s, err := unmarshalStatus(ev.Kv.Value)
 				if err != nil {
 					logrus.Error(err)
