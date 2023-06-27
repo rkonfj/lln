@@ -174,27 +174,7 @@ func loadStatusByLinker(key, after string, size int64) (ss []*Status) {
 }
 
 func Recommendations(user *ActUser, after string, size int64) (ss []*Status) {
-	ops := []clientv3.OpOption{
-		clientv3.WithLimit(size),
-		clientv3.WithPrefix(),
-		clientv3.WithSort(clientv3.SortByCreateRevision, clientv3.SortDescend)}
-	if len(after) > 0 {
-		ops = append(ops, clientv3.WithRange(stateKey(fmt.Sprintf("/status/%s", after))))
-	}
-	resp, err := etcdClient.KV.Get(context.Background(), stateKey("/status"), ops...)
-	if err != nil {
-		logrus.Debug(err)
-		return
-	}
-	for _, kv := range resp.Kvs {
-		s, err := unmarshalStatus(kv.Value)
-		if err != nil {
-			logrus.Debug(err)
-			continue
-		}
-		ss = append(ss, s)
-	}
-	return
+	return loadStatusByLinker(stateKey("/recommended/status/"), after, size)
 }
 
 func ListStatusByLabel(value, after string, size int64) []*Status {
