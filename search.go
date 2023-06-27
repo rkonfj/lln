@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/rkonfj/lln/state"
+	"github.com/rkonfj/lln/util"
 )
 
 func search(w http.ResponseWriter, r *http.Request) {
@@ -30,13 +31,14 @@ func search(w http.ResponseWriter, r *http.Request) {
 		ss = state.ListStatusByKeyword(value, after, size)
 	}
 
+	sessionUID := r.Context().Value(util.KeySessionUID).(string)
 	var ret []*Status
 	for _, s := range ss {
-		status := castStatus(s)
+		status := castStatus(s, sessionUID)
 		if len(s.RefStatus) > 0 {
 			prev := state.GetStatus(s.RefStatus)
 			if prev != nil {
-				status.RefStatus = castStatus(prev)
+				status.RefStatus = castStatus(prev, sessionUID)
 			}
 		}
 		ret = append(ret, status)

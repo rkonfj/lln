@@ -2,7 +2,6 @@ package state
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -56,7 +55,7 @@ func getPointerValue(key string) (*clientv3.GetResponse, error) {
 		return nil, err
 	}
 	if len(resp.Kvs) != 1 {
-		return nil, errors.New("not found")
+		return nil, fmt.Errorf("pointer %s not found", key)
 	}
 	return etcdClient.KV.Get(context.Background(), string(resp.Kvs[0].Value))
 }

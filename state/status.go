@@ -116,15 +116,15 @@ func NewStatus(opts *StatusOptions) (*Status, error) {
 }
 
 func GetStatus(statusID string) *Status {
-	statusLinkerKey := stateKey(fmt.Sprintf("/status/%s", statusID))
-	resp, err := etcdClient.KV.Get(context.Background(), statusLinkerKey)
+	statusKey := stateKey(fmt.Sprintf("/status/%s", statusID))
+	resp, err := etcdClient.KV.Get(context.Background(), statusKey)
 	if err != nil {
 		logrus.Debug(err)
 		return nil
 	}
 
 	if len(resp.Kvs) == 0 {
-		logrus.Debug("not found")
+		logrus.Debugf("status %s not found", statusKey)
 		return nil
 	}
 
@@ -171,33 +171,6 @@ func loadStatusByLinker(key, after string, size int64) (ss []*Status) {
 		ss = append(ss, s)
 	}
 	return ss
-}
-
-func LikeStatus(user *ActUser, statusID string) error {
-	statusLikeSetKey := stateKey(fmt.Sprintf("/like/status/%s/%s", statusID, user.ID))
-	b, err := json.Marshal(user)
-	if err != nil {
-		return err
-	}
-	s := GetStatus(statusID)
-	if s == nil {
-		return ErrStatusNotFound
-	}
-	ops := []clientv3.Op{clientv3.OpPut(statusLikeSetKey, string(b))}
-	ops = append(ops, newMessageOps(MsgOptions{
-		from:     user,
-		toUID:    s.User.ID,
-		msgType:  MsgTypeLike,
-		targetID: s.ID,
-		message:  s.Overview(),
-	})...)
-
-	_, err = etcdClient.Txn(context.Background()).
-		If(clientv3.Compare(clientv3.Version(statusLikeSetKey), ">", 0)).
-		Then(clientv3.OpDelete(statusLikeSetKey)).
-		Else(ops...).
-		Commit()
-	return err
 }
 
 func Recommendations(user *ActUser, after string, size int64) (ss []*Status) {

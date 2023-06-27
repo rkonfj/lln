@@ -25,14 +25,16 @@ func explore(w http.ResponseWriter, r *http.Request) {
 	if r.Context().Value(util.KeySession) != nil {
 		user = r.Context().Value(util.KeySession).(*session.Session).ToUser()
 	}
+
+	sessionUID := r.Context().Value(util.KeySessionUID).(string)
 	ss := state.Recommendations(user, r.URL.Query().Get("after"), size)
 	var ret []*Status
 	for _, s := range ss {
-		status := castStatus(s)
+		status := castStatus(s, sessionUID)
 		if len(s.RefStatus) > 0 {
 			prev := state.GetStatus(s.RefStatus)
 			if prev != nil {
-				status.RefStatus = castStatus(prev)
+				status.RefStatus = castStatus(prev, sessionUID)
 			}
 		}
 		ret = append(ret, status)

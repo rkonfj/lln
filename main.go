@@ -64,7 +64,7 @@ func startAction(cmd *cobra.Command, args []string) error {
 	r.Use(middleware.Logger)
 
 	r.Route("/i", func(r chi.Router) {
-		r.Use(security, common)
+		r.Use(common, security)
 		r.Post(fmt.Sprintf("/like/status/{%s}", util.StatusID), likeStatus)
 		r.Post(fmt.Sprintf("/like/user/{%s}", util.UniqueName), likeUser)
 		r.Post(fmt.Sprintf("/bookmark/status/{%s}", util.StatusID), bookmarkStatus)
@@ -104,7 +104,7 @@ func security(h http.Handler) http.Handler {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-		h.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), util.KeySession, ssion)))
+		h.ServeHTTP(w, r)
 	}
 	return http.HandlerFunc(fn)
 }
@@ -114,7 +114,15 @@ func common(h http.Handler) http.Handler {
 		apiKey := r.Header.Get("Authorization")
 		w.Header().Add("X-Session-Valid", fmt.Sprintf("%t", len(apiKey) > 0 &&
 			session.DefaultSessionManager.Load(apiKey) != nil))
-		h.ServeHTTP(w, r)
+		ssion := session.DefaultSessionManager.Load(apiKey)
+		ctx := r.Context()
+		if ssion != nil {
+			ctx = context.WithValue(ctx, util.KeySession, ssion)
+			ctx = context.WithValue(ctx, util.KeySessionUID, ssion.ID)
+		} else {
+			ctx = context.WithValue(ctx, util.KeySessionUID, "")
+		}
+		h.ServeHTTP(w, r.WithContext(ctx))
 	}
 	return http.HandlerFunc(fn)
 }

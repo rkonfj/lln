@@ -33,5 +33,17 @@ func listBookmarks(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	ss := state.ListBookmarks(ssion.ToUser(), r.URL.Query().Get("after"), size)
-	json.NewEncoder(w).Encode(ss)
+	sessionUID := r.Context().Value(util.KeySessionUID).(string)
+	var ret []*Status
+	for _, s := range ss {
+		status := castStatus(s, sessionUID)
+		if len(s.RefStatus) > 0 {
+			prev := state.GetStatus(s.RefStatus)
+			if prev != nil {
+				status.RefStatus = castStatus(prev, sessionUID)
+			}
+		}
+		ret = append(ret, status)
+	}
+	json.NewEncoder(w).Encode(ret)
 }

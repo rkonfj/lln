@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/sirupsen/logrus"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
@@ -39,4 +40,18 @@ func BookmarkStatus(user *ActUser, statusID string) error {
 
 func ListBookmarks(user *ActUser, after string, size int64) []*Status {
 	return loadStatusByLinker(stateKey(fmt.Sprintf("/bookmark/%s", user.ID)), after, size)
+}
+
+func Bookmarked(statusID, uid string) bool {
+	bookmarkKey := stateKey(fmt.Sprintf("/bookmark/%s/%s", uid, statusID))
+	resp, err := etcdClient.KV.Get(context.Background(), bookmarkKey, clientv3.WithCountOnly())
+	if err != nil {
+		logrus.Error(err)
+		return false
+	}
+	return resp.Count > 0
+}
+
+func bookmarkCount(statusID string) int64 {
+	return countKeys(stateKey(fmt.Sprintf("/bookmark/status/%s/", statusID)))
 }

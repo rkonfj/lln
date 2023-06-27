@@ -30,6 +30,8 @@ type Status struct {
 	LikeCount  int64                   `json:"likeCount"`
 	Views      int64                   `json:"views"`
 	Bookmarks  int64                   `json:"bookmarks"`
+	Liked      bool                    `json:"liked"`
+	Bookmarked bool                    `json:"bookmarked"`
 }
 
 var labelsRegex = regexp.MustCompile(`#([\p{L}\d_]+)`)
@@ -37,8 +39,9 @@ var imageRegex = regexp.MustCompile(`\[img\](https://[^\s\[\]]+)\[/img\]`)
 var breaklineRegex = regexp.MustCompile(`\n\n+`)
 var atRegex = regexp.MustCompile(`@([\p{L}\d_]+)`)
 
+// status thread model
 func status(w http.ResponseWriter, r *http.Request) {
-	status := chainStatus(chi.URLParam(r, util.StatusID))
+	status := chainStatus(chi.URLParam(r, util.StatusID), r.Context().Value(util.KeySessionUID).(string))
 	if status == nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -46,6 +49,7 @@ func status(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(status)
 }
 
+// statusComments thread comments model
 func statusComments(w http.ResponseWriter, r *http.Request) {
 	size := int64(20)
 	sizeStr := r.URL.Query().Get("size")
@@ -59,17 +63,22 @@ func statusComments(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	comments := state.StatusComments(chi.URLParam(r, util.StatusID), r.URL.Query().Get("after"), size)
-	json.NewEncoder(w).Encode(comments)
+	sessionUID := r.Context().Value(util.KeySessionUID).(string)
+	var ss []*Status
+	for _, s := range comments {
+		ss = append(ss, castStatus(s, sessionUID))
+	}
+	json.NewEncoder(w).Encode(ss)
 }
 
-func chainStatus(statusID string) *Status {
+func chainStatus(statusID, sessionUID string) *Status {
 	status := state.GetStatus(statusID)
 	if status == nil {
 		return nil
 	}
-	s := castStatus(status)
+	s := castStatus(status, sessionUID)
 	if len(status.RefStatus) > 0 {
-		s.RefStatus = chainStatus(status.RefStatus)
+		s.RefStatus = chainStatus(status.RefStatus, sessionUID)
 	}
 	return s
 }
@@ -87,12 +96,15 @@ func userStatus(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	ss := state.UserStatus(chi.URLParam(r, util.UniqueName), r.URL.Query().Get("after"), size)
+	sessionUID := r.Context().Value(util.KeySessionUID).(string)
 	var ret []*Status
 	for _, s := range ss {
-		status := castStatus(s)
-		prev := state.GetStatus(s.RefStatus)
-		if prev != nil {
-			status.RefStatus = castStatus(prev)
+		status := castStatus(s, sessionUID)
+		if len(s.RefStatus) > 0 {
+			prev := state.GetStatus(s.RefStatus)
+			if prev != nil {
+				status.RefStatus = castStatus(prev, sessionUID)
+			}
 		}
 		ret = append(ret, status)
 	}
@@ -188,7 +200,12 @@ func newStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(s)
 }
 
-func castStatus(s *state.Status) *Status {
+func castStatus(s *state.Status, sessionUID string) *Status {
+	var liked, bookmarked bool
+	if len(sessionUID) > 0 {
+		liked = state.Liked(s.ID, sessionUID)
+		bookmarked = state.Bookmarked(s.ID, sessionUID)
+	}
 	return &Status{
 		ID:         s.ID,
 		Content:    s.Content,
@@ -198,5 +215,7 @@ func castStatus(s *state.Status) *Status {
 		Views:      s.Views,
 		LikeCount:  s.LikeCount,
 		Bookmarks:  s.Bookmarks,
+		Liked:      liked,
+		Bookmarked: bookmarked,
 	}
 }
