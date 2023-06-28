@@ -8,15 +8,25 @@ import (
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
-func StatusComments(statusID, after string, size int64) (ss []*Status) {
-	statusCommentsKey := stateKey(fmt.Sprintf("/comments/status/%s/", statusID))
+type StatusCommentsOptions struct {
+	StatusID   string
+	After      string
+	Size       int64
+	SortAscend bool
+}
 
+func StatusComments(opts StatusCommentsOptions) (ss []*Status) {
+	statusCommentsKey := stateKey(fmt.Sprintf("/comments/status/%s/", opts.StatusID))
+	sortOrder := clientv3.SortDescend
+	if opts.SortAscend {
+		sortOrder = clientv3.SortAscend
+	}
 	ops := []clientv3.OpOption{
-		clientv3.WithLimit(size),
+		clientv3.WithLimit(opts.Size),
 		clientv3.WithPrefix(),
-		clientv3.WithSort(clientv3.SortByCreateRevision, clientv3.SortDescend)}
-	if len(after) > 0 {
-		ops = append(ops, clientv3.WithRange(statusCommentsKey+after))
+		clientv3.WithSort(clientv3.SortByCreateRevision, sortOrder)}
+	if len(opts.After) > 0 {
+		ops = append(ops, clientv3.WithRange(statusCommentsKey+opts.After))
 	}
 
 	resp, err := etcdClient.KV.Get(context.Background(), statusCommentsKey, ops...)

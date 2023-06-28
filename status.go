@@ -63,7 +63,13 @@ func statusComments(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	comments := state.StatusComments(chi.URLParam(r, util.StatusID), r.URL.Query().Get("after"), size)
+
+	comments := state.StatusComments(state.StatusCommentsOptions{
+		StatusID:   chi.URLParam(r, util.StatusID),
+		After:      r.URL.Query().Get("after"),
+		Size:       size,
+		SortAscend: r.URL.Query().Get("order") == "asc",
+	})
 	sessionUID := r.Context().Value(util.KeySessionUID).(string)
 	var ss []*Status
 	for _, s := range comments {
