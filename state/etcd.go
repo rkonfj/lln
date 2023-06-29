@@ -60,3 +60,35 @@ func getPointerValue(key string) (*clientv3.GetResponse, error) {
 	}
 	return etcdClient.KV.Get(context.Background(), string(resp.Kvs[0].Value))
 }
+
+func Put(key string, value []byte) error {
+	_, err := etcdClient.KV.Put(context.Background(), stateKey(key), string(value))
+	return err
+}
+
+func Del(key string) error {
+	_, err := etcdClient.KV.Delete(context.Background(), key)
+	return err
+}
+
+func IterateWithPrefix(prefix string, handle func(key string, value []byte)) error {
+	var lastCreateRev int64
+	for {
+		resp, err := etcdClient.KV.Get(context.Background(), stateKey(prefix),
+			clientv3.WithPrefix(),
+			clientv3.WithLimit(1024),
+			clientv3.WithMinCreateRev(lastCreateRev+1))
+		if err != nil {
+			return err
+		}
+		for _, kv := range resp.Kvs {
+			handle(string(kv.Key), kv.Value)
+			lastCreateRev = kv.CreateRevision
+		}
+		if !resp.More {
+			logrus.Debugf("[state] iterate prefix %s done", prefix)
+			break
+		}
+	}
+	return nil
+}

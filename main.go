@@ -45,6 +45,7 @@ func initAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
 	err = loadConfig(configPath)
 	if err != nil {
 		return err
@@ -56,7 +57,11 @@ func initAction(cmd *cobra.Command, args []string) error {
 		KeyFile:       config.State.Etcd.KeyFile,
 		TrustedCAFile: config.State.Etcd.TrustedCAFile,
 	})
+	if err != nil {
+		return err
+	}
 
+	err = session.InitSession()
 	return err
 }
 

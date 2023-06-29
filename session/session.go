@@ -1,8 +1,10 @@
 package session
 
-import "github.com/rkonfj/lln/state"
+import (
+	"github.com/rkonfj/lln/state"
+)
 
-var DefaultSessionManager = NewSessionManager()
+var DefaultSessionManager SessionManager
 
 func Create(opts *state.UserOptions) (*Session, error) {
 	u := state.UserByEmail(opts.Email)
@@ -18,4 +20,9 @@ func Create(opts *state.UserOptions) (*Session, error) {
 	}
 	DefaultSessionManager.Create(s)
 	return s, nil
+}
+
+func InitSession() error {
+	DefaultSessionManager = NewSessionManager()
+	return nil
 }

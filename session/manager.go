@@ -2,12 +2,14 @@ package session
 
 import (
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"sync"
 
 	"github.com/decred/base58"
 	"github.com/rkonfj/lln/state"
 	"github.com/rs/xid"
+	"github.com/sirupsen/logrus"
 )
 
 type Session struct {
@@ -40,13 +42,6 @@ type MemorySessionManger struct {
 	revSession map[string][]string
 }
 
-func NewSessionManager() *MemorySessionManger {
-	return &MemorySessionManger{
-		session:    make(map[string]*Session),
-		revSession: make(map[string][]string),
-	}
-}
-
 func (sm *MemorySessionManger) Create(s *Session) error {
 	b := make([]byte, 16)
 	rand.Reader.Read(b)
@@ -72,4 +67,55 @@ func (sm *MemorySessionManger) Expire(userID string) error {
 		delete(sm.revSession, userID)
 	}
 	return nil
+}
+
+type PersistentSessionManager struct {
+	MemorySessionManger
+}
+
+func NewSessionManager() *PersistentSessionManager {
+	sm := &PersistentSessionManager{
+		MemorySessionManger: MemorySessionManger{
+			session:    make(map[string]*Session),
+			revSession: make(map[string][]string),
+		},
+	}
+	err := state.IterateWithPrefix("/session", func(_ string, value []byte) {
+		ssion := Session{}
+		err := json.Unmarshal(value, &ssion)
+		if err != nil {
+			logrus.Error(err)
+			return
+		}
+		sm.MemorySessionManger.session[ssion.ApiKey] = &ssion
+		sm.MemorySessionManger.revSession[ssion.ID] = append(sm.MemorySessionManger.revSession[ssion.ID], ssion.ApiKey)
+	})
+	if err != nil {
+		logrus.Error("iterate session error: ", err)
+	}
+	return sm
+}
+
+func (sm *PersistentSessionManager) Create(s *Session) error {
+	err := sm.MemorySessionManger.Create(s)
+	if err != nil {
+		return err
+	}
+	b, err := json.Marshal(s)
+	if err != nil {
+		logrus.Warn(err)
+		return nil
+	}
+	state.Put(fmt.Sprintf("/session/%s", s.ApiKey), b)
+	return nil
+}
+
+func (sm *PersistentSessionManager) Expire(userID string) error {
+	for _, key := range sm.MemorySessionManger.revSession[userID] {
+		err := state.Del(fmt.Sprintf("/session/%s", key))
+		if err != nil {
+			return err
+		}
+	}
+	return sm.Expire(userID)
 }
