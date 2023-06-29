@@ -12,6 +12,13 @@ import (
 	"github.com/rkonfj/lln/util"
 )
 
+type User struct {
+	state.User
+	Following  bool  `json:"following"`
+	Followers  int64 `json:"followers"`
+	Followings int64 `json:"followings"`
+}
+
 func profile(w http.ResponseWriter, r *http.Request) {
 	uniqueName, err := url.PathUnescape(chi.URLParam(r, util.UniqueName))
 	if err != nil {
@@ -24,16 +31,21 @@ func profile(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-
-	if r.Context().Value(util.KeySession) == nil {
+	sessionUID := r.Context().Value(util.KeySessionUID).(string)
+	if r.Context().Value(util.KeySessionUID) == nil || sessionUID != u.ID {
 		// privacy
 		u.Email = ""
 		u.Locale = ""
 	}
-	json.NewEncoder(w).Encode(u)
+
+	json.NewEncoder(w).Encode(User{
+		User:       *u,
+		Followers:  u.Followers(),
+		Followings: u.Followings(),
+		Following:  u.FollowingBy(sessionUID)})
 }
 
-func likeUser(w http.ResponseWriter, r *http.Request) {
+func followUser(w http.ResponseWriter, r *http.Request) {
 	var ssion = r.Context().Value(util.KeySession).(*session.Session)
 	uniqueName, err := url.PathUnescape(chi.URLParam(r, util.UniqueName))
 	if err != nil {
@@ -41,7 +53,7 @@ func likeUser(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(err.Error()))
 		return
 	}
-	err = state.LikeUser(ssion.ToUser(), uniqueName)
+	err = state.FollowUser(ssion.ToUser(), uniqueName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))

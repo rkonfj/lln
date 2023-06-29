@@ -14,6 +14,12 @@ import (
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
+var (
+	tUser          string = "/user/%s"
+	tFollowUser    string = "/user/%s/follow/%s"
+	tFollowingUser string = "/user/%s/following/%s"
+)
+
 type User struct {
 	ID         string    `json:"id"`
 	UniqueName string    `json:"uniqueName"`
@@ -28,7 +34,7 @@ func (u *User) ChangeName(newName string) error {
 	if u.Name == newName {
 		return nil
 	}
-	key := stateKey(fmt.Sprintf("/user/%s", u.ID))
+	key := stateKey(fmt.Sprintf(tUser, u.ID))
 	resp, err := etcdClient.KV.Get(context.Background(), key)
 	if err != nil {
 		return err
@@ -65,7 +71,7 @@ func (u *User) ChangeUniqueName(newUniqueName string) error {
 	if u.UniqueName == newUniqueName {
 		return nil
 	}
-	key := stateKey(fmt.Sprintf("/user/%s", u.ID))
+	key := stateKey(fmt.Sprintf(tUser, u.ID))
 	uniqueNameKey := stateKey(fmt.Sprintf("/%s/%s", util.UniqueName, newUniqueName))
 	oldUniqueNameKey := stateKey(fmt.Sprintf("/%s/%s", util.UniqueName, u.UniqueName))
 	resp, err := etcdClient.KV.Get(context.Background(), key)
@@ -104,8 +110,41 @@ func (u *User) ChangeUniqueName(newUniqueName string) error {
 	return nil
 }
 
+// ListStatus list user all status
 func (u *User) ListStatus(after string, size int64) (ss []*Status) {
 	return loadStatusByLinker(stateKey(fmt.Sprintf("/%s/status/", u.ID)), after, size)
+}
+
+// FollowingBy determine if {uid} is following me
+func (u *User) FollowingBy(uid string) bool {
+	resp, err := etcdClient.KV.Get(context.Background(), stateKey(fmt.Sprintf(tFollowUser, u.ID, uid)), clientv3.WithCountOnly())
+	if err != nil {
+		logrus.Errorf("FollowingBy error: %s", err)
+		return false
+	}
+	return resp.Count == 1
+}
+
+// Followers follower count
+func (u *User) Followers() int64 {
+	resp, err := etcdClient.KV.Get(context.Background(), stateKey(fmt.Sprintf(tFollowUser, u.ID, "")),
+		clientv3.WithPrefix(), clientv3.WithCountOnly())
+	if err != nil {
+		logrus.Errorf("FollowingBy etcd error: %s", err)
+		return 0
+	}
+	return resp.Count
+}
+
+// Followings following count
+func (u *User) Followings() int64 {
+	resp, err := etcdClient.KV.Get(context.Background(), stateKey(fmt.Sprintf(tFollowingUser, u.ID, "")),
+		clientv3.WithPrefix(), clientv3.WithCountOnly())
+	if err != nil {
+		logrus.Errorf("Followings etcd error: %s", err)
+		return 0
+	}
+	return resp.Count
 }
 
 type ActUser struct {
@@ -127,7 +166,7 @@ func UserByEmail(email string) *User {
 }
 
 func UserByID(userID string) *User {
-	resp, err := etcdClient.KV.Get(context.Background(), stateKey(fmt.Sprintf("/user/%s", userID)))
+	resp, err := etcdClient.KV.Get(context.Background(), stateKey(fmt.Sprintf(tUser, userID)))
 	return castUser(resp, err)
 }
 
@@ -175,7 +214,7 @@ func NewUser(opts *UserOptions) *User {
 		return nil
 	}
 
-	userKey := stateKey(fmt.Sprintf("/user/%s", u.ID))
+	userKey := stateKey(fmt.Sprintf(tUser, u.ID))
 	emailKey := stateKey(fmt.Sprintf("/email/%s", u.Email))
 	uniqueNameKey := stateKey(fmt.Sprintf("/uniqueName/%s", u.UniqueName))
 	_, err = etcdClient.Txn(context.Background()).
@@ -192,16 +231,29 @@ func NewUser(opts *UserOptions) *User {
 	return u
 }
 
-func LikeUser(user *ActUser, uniqueName string) error {
+func FollowUser(user *ActUser, uniqueName string) error {
 	targetUser := UserByUniqueName(uniqueName)
 	if targetUser == nil {
 		return errors.New("not found")
 	}
-	userLikeSetKey := stateKey(fmt.Sprintf("/user/%s/like/%s", targetUser.ID, user.ID))
+	followUserKey := stateKey(fmt.Sprintf(tFollowUser, targetUser.ID, user.ID))
+	followingUserKey := stateKey(fmt.Sprintf(tFollowingUser, user.ID, targetUser.ID))
 	b, err := json.Marshal(user)
 	if err != nil {
 		return err
 	}
-	_, err = etcdClient.KV.Put(context.Background(), userLikeSetKey, string(b))
+
+	delOps := []clientv3.Op{clientv3.OpDelete(followUserKey), clientv3.OpDelete(followingUserKey)}
+	newOps := []clientv3.Op{clientv3.OpPut(followUserKey, string(b)),
+		clientv3.OpPut(followingUserKey, stateKey(fmt.Sprintf(tUser, targetUser.ID)))}
+	newOps = append(newOps, newMessageOps(MsgOptions{
+		from:     user,
+		toUID:    targetUser.ID,
+		msgType:  MsgTypeFollow,
+		targetID: targetUser.ID,
+	})...)
+	_, err = etcdClient.Txn(context.Background()).
+		If(clientv3.Compare(clientv3.Version(followUserKey), ">", 0)).
+		Then(delOps...).Else(newOps...).Commit()
 	return err
 }

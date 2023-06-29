@@ -17,6 +17,7 @@ var (
 	MsgTypeBookmark string = "bookmark"
 	MsgTypeComment  string = "comment"
 	MsgTypeAt       string = "at"
+	MsgTypeFollow   string = "follow"
 )
 
 type Message struct {

@@ -50,12 +50,14 @@ func initAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return state.InitState(state.EtcdOptions{
+	err = state.InitState(state.EtcdOptions{
 		Endpoints:     config.State.Etcd.Endpoints,
 		CertFile:      config.State.Etcd.CertFile,
 		KeyFile:       config.State.Etcd.KeyFile,
 		TrustedCAFile: config.State.Etcd.TrustedCAFile,
 	})
+
+	return err
 }
 
 func startAction(cmd *cobra.Command, args []string) error {
@@ -66,7 +68,7 @@ func startAction(cmd *cobra.Command, args []string) error {
 	r.Route("/i", func(r chi.Router) {
 		r.Use(common, security)
 		r.Post(fmt.Sprintf("/like/status/{%s}", util.StatusID), likeStatus)
-		r.Post(fmt.Sprintf("/like/user/{%s}", util.UniqueName), likeUser)
+		r.Post(fmt.Sprintf("/follow/user/{%s}", util.UniqueName), followUser)
 		r.Post(fmt.Sprintf("/bookmark/status/{%s}", util.StatusID), bookmarkStatus)
 		r.Post("/status", newStatus)
 		r.Put("/name", changeName)
