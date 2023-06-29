@@ -111,11 +111,13 @@ func (sm *PersistentSessionManager) Create(s *Session) error {
 }
 
 func (sm *PersistentSessionManager) Expire(userID string) error {
-	for _, key := range sm.MemorySessionManger.revSession[userID] {
+	apiKeys := sm.MemorySessionManger.revSession[userID]
+	logrus.Debug("expire api keys: ", apiKeys)
+	for _, key := range apiKeys {
 		err := state.Del(fmt.Sprintf("/session/%s", key))
 		if err != nil {
 			return err
 		}
 	}
-	return sm.Expire(userID)
+	return sm.MemorySessionManger.Expire(userID)
 }

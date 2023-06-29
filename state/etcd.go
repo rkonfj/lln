@@ -67,7 +67,7 @@ func Put(key string, value []byte) error {
 }
 
 func Del(key string) error {
-	_, err := etcdClient.KV.Delete(context.Background(), key)
+	_, err := etcdClient.KV.Delete(context.Background(), stateKey(key))
 	return err
 }
 
