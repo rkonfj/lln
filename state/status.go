@@ -26,6 +26,7 @@ type Status struct {
 	Content    []*StatusFragment `json:"content"`
 	RefStatus  string            `json:"prev"`
 	User       *ActUser          `json:"user"`
+	CreateRev  int64             `json:"createRev"`
 	CreateTime time.Time         `json:"createTime"`
 	Comments   int64             `json:"comments"`
 	LikeCount  int64             `json:"likeCount"`
@@ -126,9 +127,10 @@ func GetStatus(statusID string) *Status {
 	if len(resp.Kvs) == 0 {
 		logrus.Debugf("status %s not found", statusKey)
 		return nil
+
 	}
 
-	s, err := unmarshalStatus(resp.Kvs[0].Value)
+	s, err := unmarshalStatus(resp.Kvs[0].Value, resp.Kvs[0].CreateRevision)
 	if err != nil {
 		logrus.Debug(err)
 		return nil
@@ -163,7 +165,7 @@ func loadStatusByLinker(key, after string, size int64) (ss []*Status) {
 			logrus.Error("not found ", string(kv.Value))
 			continue
 		}
-		s, err := unmarshalStatus(r.Kvs[0].Value)
+		s, err := unmarshalStatus(r.Kvs[0].Value, r.Kvs[0].CreateRevision)
 		if err != nil {
 			logrus.Error(err)
 			continue
@@ -185,12 +187,13 @@ func ListStatusByKeyword(value, after string, size int64) []*Status {
 	return nil
 }
 
-func unmarshalStatus(b []byte) (s *Status, err error) {
+func unmarshalStatus(b []byte, cRev int64) (s *Status, err error) {
 	s = &Status{}
 	err = json.Unmarshal(b, s)
 	if err != nil {
 		return nil, err
 	}
+	s.CreateRev = cRev
 	s.Comments = commentsCount(s.ID)
 	s.LikeCount = likeCount(s.ID)
 	s.Views = viewCount(s.ID)

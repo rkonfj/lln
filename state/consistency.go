@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"github.com/sirupsen/logrus"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -11,8 +12,8 @@ import (
 )
 
 var (
-	UserChanged   chan *User = make(chan *User, 128)
-	lastStatuskey string     = stateKey("/recommended/last")
+	UserChanged         chan *User = make(chan *User, 128)
+	lastStatusCreateRev string     = stateKey("/recommended/lastrev")
 )
 
 func start() {
@@ -65,21 +66,29 @@ func keepRecommendedStatusLoop() {
 		return
 	}
 
-	logrus.Info("keepRecommendedStatusLoop act as leader")
+	logrus.Info("[recommended-algo] act as leader")
 
-	lastStatus, err := etcdClient.KV.Get(context.Background(), lastStatuskey, clientv3.WithCountOnly())
+	lastCreateRev, err := etcdClient.KV.Get(context.Background(), lastStatusCreateRev)
 	if err != nil {
 		logrus.Error(err)
 		return
 	}
 
+	createRev := int64(0)
+
+	if lastCreateRev.Count > 0 {
+		createRev, err = strconv.ParseInt(string(lastCreateRev.Kvs[0].Value), 10, 64)
+		if err != nil {
+			logrus.Error(err)
+			return
+		}
+	}
+
 	opts := []clientv3.OpOption{
 		clientv3.WithLimit(1024),
 		clientv3.WithPrefix(),
+		clientv3.WithMinCreateRev(createRev + 1),
 		clientv3.WithSort(clientv3.SortByCreateRevision, clientv3.SortAscend)}
-	if len(lastStatus.Kvs) > 0 {
-		opts = append(opts, clientv3.WithRange(stateKey(fmt.Sprintf("/status/%s", lastStatus.Kvs[0].Value))))
-	}
 	resp, err := etcdClient.KV.Get(context.Background(), stateKey("/status/"), opts...)
 	if err != nil {
 		logrus.Error(err)
@@ -87,7 +96,7 @@ func keepRecommendedStatusLoop() {
 	}
 
 	for _, kv := range resp.Kvs {
-		s, err := unmarshalStatus(kv.Value)
+		s, err := unmarshalStatus(kv.Value, kv.CreateRevision)
 		if err != nil {
 			logrus.Error(err)
 			continue
@@ -99,17 +108,22 @@ func keepRecommendedStatusLoop() {
 		}
 	}
 
-	logrus.Infof("keepRecommendedStatusLoop process %d status successfully", resp.Count)
+	if len(resp.Kvs) > 0 {
+		logrus.Infof("[recommended-algo] process %d status successfully", len(resp.Kvs))
+	} else {
+		logrus.Infof("[recommended-algo] every is ok")
+	}
 
 	rch := etcdClient.Watch(context.Background(), stateKey("/status/"), clientv3.WithPrefix())
 	for wresp := range rch {
 		for _, ev := range wresp.Events {
 			if ev.IsCreate() {
-				s, err := unmarshalStatus(ev.Kv.Value)
+				s, err := unmarshalStatus(ev.Kv.Value, ev.Kv.CreateRevision)
 				if err != nil {
 					logrus.Error(err)
 					continue
 				}
+				logrus.Debugf("[recommended-algo] apply recommend algo to %s", ev.Kv.Key)
 				err = recommend(s)
 				if err != nil {
 					logrus.Error(err)
@@ -126,16 +140,17 @@ func recommend(s *Status) error {
 	}
 	statusKey := stateKey(fmt.Sprintf("/status/%s", s.ID))
 	putKey := stateKey(fmt.Sprintf("/recommended/status/%s", s.ID))
+	ops := []clientv3.Op{clientv3.OpPut(putKey, statusKey),
+		clientv3.OpPut(lastStatusCreateRev, fmt.Sprintf("%d", s.CreateRev))}
 	if len(s.RefStatus) > 0 {
 		delKey := stateKey(fmt.Sprintf("/recommended/status/%s", s.RefStatus))
 		_, err := etcdClient.Txn(context.Background()).
 			If(clientv3.Compare(clientv3.Version(delKey), "=", 0)).
-			Then(clientv3.OpPut(putKey, statusKey), clientv3.OpPut(lastStatuskey, s.ID)).
-			Else(clientv3.OpPut(putKey, statusKey), clientv3.OpPut(lastStatuskey, s.ID),
-				clientv3.OpDelete(delKey)).Commit()
+			Then(ops...).
+			Else(append(ops, clientv3.OpDelete(delKey))...).Commit()
 		return err
 	}
 	_, err := etcdClient.Txn(context.Background()).
-		Then(clientv3.OpPut(putKey, statusKey), clientv3.OpPut(lastStatuskey, s.ID)).Commit()
+		Then(ops...).Commit()
 	return err
 }

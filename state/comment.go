@@ -45,7 +45,7 @@ func StatusComments(opts StatusCommentsOptions) (ss []*Status) {
 			logrus.Error("bad relation")
 			continue
 		}
-		s, err := unmarshalStatus(resp.Kvs[0].Value)
+		s, err := unmarshalStatus(resp.Kvs[0].Value, resp.Kvs[0].CreateRevision)
 		if err != nil {
 			logrus.Debug(err)
 			continue

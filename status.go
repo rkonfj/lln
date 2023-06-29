@@ -26,6 +26,7 @@ type Status struct {
 	Content    []*state.StatusFragment `json:"content"`
 	RefStatus  *Status                 `json:"prev"`
 	User       *state.ActUser          `json:"user"`
+	CreateRev  int64                   `json:"createRev"`
 	CreateTime time.Time               `json:"createTime"`
 	Comments   int64                   `json:"comments"`
 	LikeCount  int64                   `json:"likeCount"`
@@ -223,6 +224,7 @@ func castStatus(s *state.Status, sessionUID string) *Status {
 		ID:         s.ID,
 		Content:    s.Content,
 		User:       s.User,
+		CreateRev:  s.CreateRev,
 		CreateTime: s.CreateTime,
 		Comments:   s.Comments,
 		Views:      s.Views,
