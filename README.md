@@ -21,6 +21,7 @@
 | GET  | /o/status/{status-id}/comments | Status comments |
 | GET  | /o/user/{unique-name}/status | Get user status   |
 | GET  | /o/explore | Explore status |
+| GET  | /o/search | Search status |
 | GET  | /o/labels | List labels |
 
 ### Messages
@@ -33,6 +34,6 @@
 ### User
 | Method | Path        | Description |
 | ------ | ----------- |-------------|
-| POST | /i/like/user/{unique-name}  | Like user        |
-| PUT | /i/name                     | Change user name  |
-| GET | /o/user/{unique-name}       | Get user profile  |
+| POST | /i/like/user/{unique-name}  | Like user           |
+| PUT | /i/profile                   | Modify user profile |
+| GET | /o/user/{unique-name}       | Get user profile     |

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/decred/base58"
-	"github.com/rkonfj/lln/util"
 	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -20,6 +19,13 @@ var (
 	tFollowingUser string = "/user/%s/following/%s"
 )
 
+type ModifiableUser struct {
+	UniqueName string `json:"uniqueName"`
+	Name       string `json:"name"`
+	Picture    string `json:"picture"`
+	Locale     string `json:"locale"`
+}
+
 type User struct {
 	ID         string    `json:"id"`
 	UniqueName string    `json:"uniqueName"`
@@ -30,77 +36,46 @@ type User struct {
 	CreateTime time.Time `json:"createTime"`
 }
 
-func (u *User) ChangeName(newName string) error {
-	if u.Name == newName {
-		return nil
+// Modify apply new user props
+func (u *User) Modify(mu ModifiableUser) error {
+	if u.UniqueName == mu.UniqueName {
+		mu.UniqueName = ""
 	}
 	key := stateKey(fmt.Sprintf(tUser, u.ID))
 	resp, err := etcdClient.KV.Get(context.Background(), key)
 	if err != nil {
 		return err
 	}
-	if len(resp.Kvs) == 0 {
-		return errors.New("not found")
+
+	ops := []clientv3.Op{}
+	cmps := []clientv3.Cmp{clientv3.Compare(clientv3.ModRevision(key), "=", resp.Kvs[0].ModRevision)}
+	if len(mu.UniqueName) > 0 {
+		oldUniqueNameKey := u.UniqueName
+		u.UniqueName = mu.UniqueName
+		cmps = append(cmps, clientv3.Compare(clientv3.Version(mu.UniqueName), "=", 0))
+		ops = append(ops, clientv3.OpDelete(oldUniqueNameKey))
+		ops = append(ops, clientv3.OpPut(u.UniqueName, key))
 	}
 
-	err = json.Unmarshal(resp.Kvs[0].Value, u)
-	if err != nil {
-		return err
+	if len(mu.Name) > 0 {
+		u.Name = mu.Name
 	}
 
-	u.Name = newName
-
-	b, err := json.Marshal(u)
-	if err != nil {
-		return err
+	if len(mu.Picture) > 0 {
+		u.Picture = mu.Picture
 	}
 
-	txnResp, err := etcdClient.Txn(context.Background()).
-		If(clientv3.Compare(clientv3.ModRevision(key), "=", resp.Kvs[0].ModRevision)).
-		Then(clientv3.OpPut(key, string(b))).Commit()
-	if err != nil {
-		return err
+	if len(mu.Locale) > 0 {
+		u.Locale = mu.Locale
 	}
-	if !txnResp.Succeeded {
-		return errors.New("failed. data mod rev not doesn't match")
-	}
-	return nil
-}
-
-func (u *User) ChangeUniqueName(newUniqueName string) error {
-	if u.UniqueName == newUniqueName {
-		return nil
-	}
-	key := stateKey(fmt.Sprintf(tUser, u.ID))
-	uniqueNameKey := stateKey(fmt.Sprintf("/%s/%s", util.UniqueName, newUniqueName))
-	oldUniqueNameKey := stateKey(fmt.Sprintf("/%s/%s", util.UniqueName, u.UniqueName))
-	resp, err := etcdClient.KV.Get(context.Background(), key)
-	if err != nil {
-		return err
-	}
-	if len(resp.Kvs) == 0 {
-		return errors.New("not found")
-	}
-
-	err = json.Unmarshal(resp.Kvs[0].Value, u)
-	if err != nil {
-		return err
-	}
-
-	u.UniqueName = newUniqueName
 
 	b, err := json.Marshal(u)
 	if err != nil {
 		return err
 	}
+	ops = append(ops, clientv3.OpPut(key, string(b)))
 
-	txnResp, err := etcdClient.Txn(context.Background()).
-		If(clientv3.Compare(clientv3.ModRevision(key), "=", resp.Kvs[0].ModRevision),
-			clientv3.Compare(clientv3.Version(uniqueNameKey), "=", 0)).
-		Then(clientv3.OpPut(key, string(b)),
-			clientv3.OpDelete(oldUniqueNameKey),
-			clientv3.OpPut(uniqueNameKey, key)).
-		Commit()
+	txnResp, err := etcdClient.Txn(context.Background()).If(cmps...).Then(ops...).Commit()
 	if err != nil {
 		return err
 	}

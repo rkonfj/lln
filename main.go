@@ -76,7 +76,7 @@ func startAction(cmd *cobra.Command, args []string) error {
 		r.Post(fmt.Sprintf("/follow/user/{%s}", util.UniqueName), followUser)
 		r.Post(fmt.Sprintf("/bookmark/status/{%s}", util.StatusID), bookmarkStatus)
 		r.Post("/status", newStatus)
-		r.Put("/name", changeName)
+		r.Put("/profile", modifyProfile)
 		r.Get("/bookmarks", listBookmarks)
 		r.Get("/messages", listMessages)
 		r.Get("/messages/tips", getNewTipMessages)

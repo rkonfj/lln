@@ -2,15 +2,19 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
+	"regexp"
+	"unicode/utf8"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/rkonfj/lln/session"
 	"github.com/rkonfj/lln/state"
 	"github.com/rkonfj/lln/util"
 )
+
+var uniqueNameRegex = regexp.MustCompile(`^[\p{L}\d_]+$`)
 
 type User struct {
 	state.User
@@ -60,42 +64,59 @@ func followUser(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// changeName change name action or unique name action, only one action is atomic
-func changeName(w http.ResponseWriter, r *http.Request) {
+func modifyProfile(w http.ResponseWriter, r *http.Request) {
 	var ssion = r.Context().Value(util.KeySession).(*session.Session)
 	u := state.UserByID(ssion.ID)
 	if u == nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	name := strings.TrimSpace(r.URL.Query().Get("name"))
-	if len(name) > 0 {
-		defer session.DefaultSessionManager.Expire(ssion.ID)
-		err := u.ChangeName(name)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
-			return
-		}
-	}
-
-	uniqueName := strings.TrimSpace(r.URL.Query().Get(util.UniqueName))
-	if len(uniqueName) > 0 {
-		defer session.DefaultSessionManager.Expire(ssion.ID)
-		err := u.ChangeUniqueName(uniqueName)
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(err.Error()))
-			return
-		}
-		state.UserChanged <- u
+	var mu state.ModifiableUser
+	err := json.NewDecoder(r.Body).Decode(&mu)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
 		return
 	}
 
-	if len(name) == 0 {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("invalid name"))
-	} else {
-		state.UserChanged <- u
+	if len(mu.UniqueName) > 0 {
+		if utf8.RuneCountInString(mu.UniqueName) > 12 {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, "unique name: maximum 12 unicode characters")
+			return
+		}
+		if !uniqueNameRegex.MatchString(mu.UniqueName) {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, "unique name: not match `%s`", uniqueNameRegex)
+			return
+		}
 	}
+
+	if len(mu.Name) > 0 && utf8.RuneCountInString(mu.Name) > 20 {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "name: maximum 20 unicode characters")
+		return
+	}
+
+	if len(mu.Picture) > 0 && len(mu.Picture) > 256 {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "picture: maximum 256 characters")
+		return
+	}
+
+	if len(mu.Locale) > 0 && len(mu.Locale) > 6 {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "locale: maximum 6 characters")
+		return
+	}
+
+	err = u.Modify(mu)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	state.UserChanged <- u
+	session.DefaultSessionManager.Expire(ssion.ID)
 }

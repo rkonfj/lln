@@ -111,7 +111,7 @@ func keepRecommendedStatusLoop() {
 	if len(resp.Kvs) > 0 {
 		logrus.Infof("[recommended-algo] process %d status successfully", len(resp.Kvs))
 	} else {
-		logrus.Infof("[recommended-algo] every is ok")
+		logrus.Infof("[recommended-algo] everything is ok")
 	}
 
 	rch := etcdClient.Watch(context.Background(), stateKey("/status/"), clientv3.WithPrefix())
