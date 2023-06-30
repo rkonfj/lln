@@ -28,6 +28,10 @@ func listMessages(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(msgs)
 }
 
+func deleteMessages(w http.ResponseWriter, r *http.Request) {
+	abstractDeleteMessages(w, r, state.DeleteMessages)
+}
+
 func getNewTipMessages(w http.ResponseWriter, r *http.Request) {
 	var ssion = r.Context().Value(util.KeySession).(*session.Session)
 	tipMsgs := state.ListTipMessages(ssion.ToUser(), 100)
@@ -35,10 +39,12 @@ func getNewTipMessages(w http.ResponseWriter, r *http.Request) {
 }
 
 func deleteTipMessages(w http.ResponseWriter, r *http.Request) {
+	abstractDeleteMessages(w, r, state.DeleteTipMessages)
+}
+
+func abstractDeleteMessages(w http.ResponseWriter, r *http.Request, doDelete func(*state.ActUser, []string) error) {
 	var ssion = r.Context().Value(util.KeySession).(*session.Session)
-
 	msgs := []string{}
-
 	err := json.NewDecoder(r.Body).Decode(&msgs)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -46,7 +52,7 @@ func deleteTipMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = state.DeleteTipMessages(ssion.ToUser(), msgs)
+	err = doDelete(ssion.ToUser(), msgs)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))

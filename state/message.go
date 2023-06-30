@@ -54,6 +54,16 @@ func ListMessages(user *ActUser, after string, size int64) (msgs []*Message) {
 	return
 }
 
+func DeleteMessages(user *ActUser, msgs []string) error {
+	ops := []clientv3.Op{}
+	for _, msgID := range msgs {
+		key := stateKey(fmt.Sprintf("/message/%s/%s", user.ID, msgID))
+		ops = append(ops, clientv3.OpDelete(key))
+	}
+	_, err := etcdClient.Txn(context.Background()).Then(ops...).Commit()
+	return err
+}
+
 func ListTipMessages(user *ActUser, size int64) (msgs []string) {
 	ops := []clientv3.OpOption{
 		clientv3.WithLimit(size),
