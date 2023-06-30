@@ -150,9 +150,15 @@ func newStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(req.Content) > config.Model.Status.ContentListLimit {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(fmt.Sprintf("maximum 20 content blocks, %d", len(req.Content))))
+		return
+	}
+
 	for _, f := range req.Content {
 		count := utf8.RuneCountInString(f.Value)
-		if count > 380 {
+		if count > config.Model.Status.ContentLimit {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte(fmt.Sprintf("maximum 380 unicode characters per paragraph, %d", count)))
 			return

@@ -15,3 +15,7 @@ state:
     certFile: 
     keyFile:
     trustedCAFile: 
+model:
+  status:
+    contentListLimit: 20
+    contentLimit: 380

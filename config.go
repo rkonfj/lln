@@ -14,6 +14,7 @@ type Config struct {
 	Listen string      `yaml:"listen"`
 	OIDC   []OIDC      `yaml:"oidc"`
 	State  StateConfig `yaml:"state"`
+	Model  ModelConfig `yaml:"model"`
 }
 
 type OIDC struct {
@@ -40,6 +41,15 @@ type EtcdConfig struct {
 	TrustedCAFile string   `yaml:"trustedCAFile,omitempty"`
 }
 
+type ModelConfig struct {
+	Status StatusConfig `yaml:"status"`
+}
+
+type StatusConfig struct {
+	ContentListLimit int `yaml:"contentListLimit"`
+	ContentLimit     int `yaml:"contentLimit"`
+}
+
 var (
 	config        *Config
 	oidcProviders map[string]*OIDCProvider = make(map[string]*OIDCProvider)
@@ -58,6 +68,15 @@ func loadConfig(configPath string) error {
 	if config.State.Etcd == nil {
 		config.State.Etcd = &EtcdConfig{Endpoints: []string{"http://127.0.0.1:2379"}}
 	}
+
+	if config.Model.Status.ContentLimit == 0 {
+		config.Model.Status.ContentLimit = 380
+	}
+
+	if config.Model.Status.ContentListLimit == 0 {
+		config.Model.Status.ContentListLimit = 20
+	}
+
 	for _, o := range config.OIDC {
 		provider, err := oidc.NewProvider(context.Background(), o.Issuer)
 		if err != nil {
