@@ -34,6 +34,6 @@
 ### User
 | Method | Path        | Description |
 | ------ | ----------- |-------------|
-| POST | /i/like/user/{unique-name}  | Like user           |
-| PUT | /i/profile                   | Modify user profile |
-| GET | /o/user/{unique-name}       | Get user profile     |
+| POST | /i/follow/user/{unique-name}  | Follow user        |
+| PUT | /i/profile                     | Modify my profile  |
+| GET | /o/user/{unique-name}          | Get user profile   |
