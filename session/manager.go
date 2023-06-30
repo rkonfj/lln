@@ -33,6 +33,7 @@ func (s *Session) ToUser() *state.ActUser {
 type SessionManager interface {
 	Create(*Session) error
 	Load(string) *Session
+	Delete(string) error
 	Expire(string) error
 }
 
@@ -50,6 +51,27 @@ func (sm *MemorySessionManger) Create(s *Session) error {
 	defer sm.lock.Unlock()
 	sm.session[s.ApiKey] = s
 	sm.revSession[s.ID] = append(sm.revSession[s.ID], s.ApiKey)
+	return nil
+}
+
+func (sm *MemorySessionManger) Delete(apiKey string) error {
+	sm.lock.Lock()
+	defer sm.lock.Unlock()
+	s := sm.session[apiKey]
+	if s == nil {
+		return nil
+	}
+	delete(sm.session, apiKey)
+
+	apiKeys := []string{}
+
+	for _, key := range sm.revSession[s.ID] {
+		if key != apiKey {
+			apiKeys = append(apiKeys, key)
+		}
+	}
+
+	sm.revSession[s.ID] = apiKeys
 	return nil
 }
 
@@ -120,4 +142,12 @@ func (sm *PersistentSessionManager) Expire(userID string) error {
 		}
 	}
 	return sm.MemorySessionManger.Expire(userID)
+}
+
+func (sm *PersistentSessionManager) Delete(apiKey string) error {
+	err := state.Del(fmt.Sprintf("/session/%s", apiKey))
+	if err != nil {
+		return err
+	}
+	return sm.MemorySessionManger.Delete(apiKey)
 }

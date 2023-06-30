@@ -82,6 +82,7 @@ func startAction(cmd *cobra.Command, args []string) error {
 		r.Get("/messages/tips", getNewTipMessages)
 		r.Delete("/messages", deleteMessages)
 		r.Delete("/messages/tips", deleteTipMessages)
+		r.Delete("/authorize", deleteAuthorize)
 	})
 
 	r.Route("/o", func(r chi.Router) {

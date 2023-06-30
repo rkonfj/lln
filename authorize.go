@@ -84,6 +84,13 @@ func authorize(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func deleteAuthorize(w http.ResponseWriter, r *http.Request) {
+	if r.Context().Value(util.KeySession) == nil {
+		return
+	}
+	session.DefaultSessionManager.Delete(r.Header.Get("Authorization"))
+}
+
 func oidcRedirect(w http.ResponseWriter, r *http.Request) {
 	providerName := chi.URLParam(r, util.Provider)
 	provider := getProvider(providerName)
