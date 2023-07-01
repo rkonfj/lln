@@ -101,7 +101,7 @@ func keepRecommendedStatusLoop() {
 			logrus.Error(err)
 			continue
 		}
-		err = recommend(s)
+		err = recommend(s, false)
 		if err != nil {
 			logrus.Error(err)
 			continue
@@ -114,30 +114,55 @@ func keepRecommendedStatusLoop() {
 		logrus.Infof("[recommended-algo] everything is ok")
 	}
 
-	rch := etcdClient.Watch(context.Background(), stateKey("/status/"), clientv3.WithPrefix())
+	rch := etcdClient.Watch(context.Background(), stateKey("/status/"),
+		clientv3.WithPrefix(), clientv3.WithPrevKV())
 	for wresp := range rch {
 		for _, ev := range wresp.Events {
-			if ev.IsCreate() {
-				s, err := unmarshalStatus(ev.Kv.Value, ev.Kv.CreateRevision)
+			if ev.IsCreate() || ev.Type == clientv3.EventTypeDelete {
+				del := ev.Type == clientv3.EventTypeDelete
+				kv := ev.Kv
+				if del {
+					kv = ev.PrevKv
+				}
+				s, err := unmarshalStatus(kv.Value, kv.CreateRevision)
 				if err != nil {
 					logrus.Error(err)
 					continue
 				}
 				logrus.Debugf("[recommended-algo] apply recommend algo to %s", ev.Kv.Key)
-				err = recommend(s)
+				err = recommend(s, del)
 				if err != nil {
 					logrus.Error(err)
-					continue
 				}
+				continue
 			}
 		}
 	}
 }
 
-func recommend(s *Status) error {
+func recommend(s *Status, del bool) error {
 	if len(s.User.Picture) == 0 {
 		return nil
 	}
+
+	if del {
+		delKey := stateKey(fmt.Sprintf("/recommended/status/%s", s.ID))
+		_, err := etcdClient.KV.Delete(context.Background(), delKey)
+		if err != nil {
+			logrus.Error(err)
+		}
+
+		if len(s.RefStatus) > 0 {
+			statusKey := stateKey(fmt.Sprintf("/status/%s", s.RefStatus))
+			putKey := stateKey(fmt.Sprintf("/recommended/status/%s", s.RefStatus))
+			_, err = etcdClient.KV.Put(context.Background(), putKey, statusKey)
+			if err != nil {
+				logrus.Error(err)
+			}
+		}
+		return nil
+	}
+
 	statusKey := stateKey(fmt.Sprintf("/status/%s", s.ID))
 	putKey := stateKey(fmt.Sprintf("/recommended/status/%s", s.ID))
 	ops := []clientv3.Op{clientv3.OpPut(putKey, statusKey),

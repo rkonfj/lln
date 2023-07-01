@@ -3,6 +3,7 @@ package state
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -65,13 +66,17 @@ func NewStatus(opts *StatusOptions) (*Status, error) {
 	statusKey := stateKey(fmt.Sprintf("/status/%s", s.ID))
 	userStatusKey := stateKey(fmt.Sprintf("/%s/status/%s", s.User.ID, s.ID))
 	statusCommentsKey := stateKey(fmt.Sprintf("/comments/status/%s/%s", s.RefStatus, s.ID))
+	statusCommentPlaceholerKey := stateKey(fmt.Sprintf("/placeholer/status/%s", s.ID))
 	ops := []clientv3.Op{
 		clientv3.OpPut(statusKey, string(b)),
 		clientv3.OpPut(userStatusKey, statusKey),
+		clientv3.OpPut(statusCommentPlaceholerKey, s.ID),
 	}
 
 	if len(s.RefStatus) > 0 {
+		refCommentPlaceholerKey := stateKey(fmt.Sprintf("/placeholer/status/%s", s.RefStatus))
 		ops = append(ops, clientv3.OpPut(statusCommentsKey, statusKey))
+		ops = append(ops, clientv3.OpPut(refCommentPlaceholerKey, s.ID))
 		s := GetStatus(s.RefStatus)
 		if s != nil {
 			ops = append(ops, newMessageOps(MsgOptions{
@@ -116,21 +121,66 @@ func NewStatus(opts *StatusOptions) (*Status, error) {
 	return s, nil
 }
 
-func GetStatus(statusID string) *Status {
+func DeleteStatus(uid, statusID string) error {
+	statusCommentPlaceholerKey := stateKey(fmt.Sprintf("/placeholer/status/%s", statusID))
+	resp, err := etcdClient.KV.Get(context.Background(), statusCommentPlaceholerKey)
+	if err != nil {
+		return err
+	}
+	cmps := []clientv3.Cmp{}
+	if resp.Count > 0 {
+		// disable delete when comments count greater than 0
+		if string(resp.Kvs[0].Value) != statusID {
+			return errors.New("quote is exists")
+		}
+		cmps = append(cmps, clientv3.Compare(
+			clientv3.ModRevision(statusCommentPlaceholerKey), "=", resp.Kvs[0].ModRevision))
+	}
+
+	s := GetStatus(statusID)
+	statusCommentsKey := stateKey(fmt.Sprintf("/comments/status/%s/%s", s.RefStatus, statusID))
+	statusRecycleKey := stateKey(fmt.Sprintf("/recycle/status/%s", statusID))
+	statusKey := stateKey(fmt.Sprintf("/status/%s", statusID))
+	userStatusKey := stateKey(fmt.Sprintf("/%s/status/%s", uid, statusID))
+
+	b, _ := json.Marshal(s)
+
+	txnResp, err := etcdClient.Txn(context.Background()).If(cmps...).
+		Then(clientv3.OpDelete(statusKey),
+			clientv3.OpDelete(userStatusKey),
+			clientv3.OpDelete(statusCommentPlaceholerKey),
+			clientv3.OpDelete(statusCommentsKey),
+			clientv3.OpPut(statusRecycleKey, string(b))).Commit()
+	if err != nil {
+		return err
+	}
+
+	if !txnResp.Succeeded {
+		// disable delete when comments count greater than 0
+		return errors.New("quote is exists")
+	}
+	return nil
+}
+
+func getStatusBin(statusID string) (s []byte, createRev int64) {
 	statusKey := stateKey(fmt.Sprintf("/status/%s", statusID))
 	resp, err := etcdClient.KV.Get(context.Background(), statusKey)
 	if err != nil {
 		logrus.Debug(err)
-		return nil
+		return
 	}
 
 	if len(resp.Kvs) == 0 {
 		logrus.Debugf("status %s not found", statusKey)
-		return nil
+		return
 
 	}
+	return resp.Kvs[0].Value, resp.Kvs[0].CreateRevision
 
-	s, err := unmarshalStatus(resp.Kvs[0].Value, resp.Kvs[0].CreateRevision)
+}
+
+func GetStatus(statusID string) *Status {
+	s, err := unmarshalStatus(getStatusBin(statusID))
 	if err != nil {
 		logrus.Debug(err)
 		return nil

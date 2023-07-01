@@ -221,6 +221,15 @@ func newStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(s)
 }
 
+func deleteStatus(w http.ResponseWriter, r *http.Request) {
+	err := state.DeleteStatus(r.Context().Value(util.KeySessionUID).(string), chi.URLParam(r, util.StatusID))
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+}
+
 func castStatus(s *state.Status, sessionUID string) *Status {
 	var liked, bookmarked, followed bool
 	if len(sessionUID) > 0 {
