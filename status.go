@@ -34,6 +34,7 @@ type Status struct {
 	Bookmarks  int64                   `json:"bookmarks"`
 	Liked      bool                    `json:"liked"`
 	Bookmarked bool                    `json:"bookmarked"`
+	Followed   bool                    `json:"followed"`
 }
 
 var labelsRegex = regexp.MustCompile(`#([\p{L}\d_]+)`)
@@ -221,10 +222,11 @@ func newStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func castStatus(s *state.Status, sessionUID string) *Status {
-	var liked, bookmarked bool
+	var liked, bookmarked, followed bool
 	if len(sessionUID) > 0 {
 		liked = state.Liked(s.ID, sessionUID)
 		bookmarked = state.Bookmarked(s.ID, sessionUID)
+		followed = state.Followed(sessionUID, s.User.ID)
 	}
 	return &Status{
 		ID:         s.ID,
@@ -238,5 +240,6 @@ func castStatus(s *state.Status, sessionUID string) *Status {
 		Bookmarks:  s.Bookmarks,
 		Liked:      liked,
 		Bookmarked: bookmarked,
+		Followed:   followed,
 	}
 }

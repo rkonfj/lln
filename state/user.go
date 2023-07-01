@@ -95,12 +95,7 @@ func (u *User) ListStatus(after string, size int64) (ss []*Status) {
 
 // FollowingBy determine if {uid} is following me
 func (u *User) FollowingBy(uid string) bool {
-	resp, err := etcdClient.KV.Get(context.Background(), stateKey(fmt.Sprintf(tFollowUser, u.ID, uid)), clientv3.WithCountOnly())
-	if err != nil {
-		logrus.Errorf("FollowingBy error: %s", err)
-		return false
-	}
-	return resp.Count == 1
+	return Followed(uid, u.ID)
 }
 
 // Followers follower count
@@ -123,6 +118,15 @@ func (u *User) Followings() int64 {
 		return 0
 	}
 	return resp.Count
+}
+
+func Followed(u1, u2 string) bool {
+	resp, err := etcdClient.KV.Get(context.Background(), stateKey(fmt.Sprintf(tFollowUser, u2, u1)), clientv3.WithCountOnly())
+	if err != nil {
+		logrus.Errorf("FollowingBy error: %s", err)
+		return false
+	}
+	return resp.Count == 1
 }
 
 type ActUser struct {
