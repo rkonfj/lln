@@ -25,8 +25,9 @@ func search(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	var ss []*state.Status
+	var more bool
 	if t == "label" {
-		ss = state.ListStatusByLabel(value, after, size)
+		ss, more = state.ListStatusByLabel(value, after, size)
 	} else {
 		ss = state.ListStatusByKeyword(value, after, size)
 	}
@@ -43,5 +44,5 @@ func search(w http.ResponseWriter, r *http.Request) {
 		}
 		ret = append(ret, status)
 	}
-	json.NewEncoder(w).Encode(ret)
+	json.NewEncoder(w).Encode(L{V: ret, More: more})
 }

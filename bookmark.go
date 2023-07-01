@@ -32,7 +32,7 @@ func listBookmarks(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	ss := state.ListBookmarks(ssion.ToUser(), r.URL.Query().Get("after"), size)
+	ss, more := state.ListBookmarks(ssion.ToUser(), r.URL.Query().Get("after"), size)
 	sessionUID := r.Context().Value(util.KeySessionUID).(string)
 	var ret []*Status
 	for _, s := range ss {
@@ -45,5 +45,5 @@ func listBookmarks(w http.ResponseWriter, r *http.Request) {
 		}
 		ret = append(ret, status)
 	}
-	json.NewEncoder(w).Encode(ret)
+	json.NewEncoder(w).Encode(L{V: ret, More: more})
 }

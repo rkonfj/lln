@@ -66,7 +66,7 @@ func statusComments(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	comments := state.StatusComments(state.StatusCommentsOptions{
+	comments, more := state.StatusComments(state.StatusCommentsOptions{
 		StatusID:   chi.URLParam(r, util.StatusID),
 		After:      r.URL.Query().Get("after"),
 		Size:       size,
@@ -77,7 +77,7 @@ func statusComments(w http.ResponseWriter, r *http.Request) {
 	for _, s := range comments {
 		ss = append(ss, castStatus(s, sessionUID))
 	}
-	json.NewEncoder(w).Encode(ss)
+	json.NewEncoder(w).Encode(L{V: ss, More: more})
 }
 
 func chainStatus(statusID, sessionUID string) *Status {
@@ -110,7 +110,7 @@ func userStatus(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(err.Error()))
 		return
 	}
-	ss := state.UserStatus(uniqueName, r.URL.Query().Get("after"), size)
+	ss, more := state.UserStatus(uniqueName, r.URL.Query().Get("after"), size)
 	sessionUID := r.Context().Value(util.KeySessionUID).(string)
 	var ret []*Status
 	for _, s := range ss {
@@ -123,7 +123,7 @@ func userStatus(w http.ResponseWriter, r *http.Request) {
 		}
 		ret = append(ret, status)
 	}
-	json.NewEncoder(w).Encode(ret)
+	json.NewEncoder(w).Encode(L{V: ret, More: more})
 }
 
 func likeStatus(w http.ResponseWriter, r *http.Request) {

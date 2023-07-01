@@ -38,7 +38,7 @@ func BookmarkStatus(user *ActUser, statusID string) error {
 	return err
 }
 
-func ListBookmarks(user *ActUser, after string, size int64) []*Status {
+func ListBookmarks(user *ActUser, after string, size int64) ([]*Status, bool) {
 	return loadStatusByLinker(stateKey(fmt.Sprintf("/bookmark/%s", user.ID)), after, size)
 }
 

@@ -25,7 +25,7 @@ func keepStatusUserConsistentLoop() {
 	for e := range UserChanged {
 		lastKey := ""
 		for {
-			ss := e.ListStatus(lastKey, 20)
+			ss, more := e.ListStatus(lastKey, 20)
 			if ss == nil {
 				break
 			}
@@ -47,6 +47,9 @@ func keepStatusUserConsistentLoop() {
 						logrus.Error(err)
 					}
 				}
+			}
+			if !more {
+				break
 			}
 		}
 	}

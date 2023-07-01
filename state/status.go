@@ -188,11 +188,11 @@ func GetStatus(statusID string) *Status {
 	return s
 }
 
-func UserStatus(uniqueName, after string, size int64) []*Status {
+func UserStatus(uniqueName, after string, size int64) ([]*Status, bool) {
 	return UserByUniqueName(uniqueName).ListStatus(after, size)
 }
 
-func loadStatusByLinker(key, after string, size int64) (ss []*Status) {
+func loadStatusByLinker(key, after string, size int64) (ss []*Status, more bool) {
 	opts := []clientv3.OpOption{
 		clientv3.WithPrefix(),
 		clientv3.WithLimit(size),
@@ -222,14 +222,14 @@ func loadStatusByLinker(key, after string, size int64) (ss []*Status) {
 		}
 		ss = append(ss, s)
 	}
-	return ss
+	return ss, resp.More
 }
 
-func Recommendations(user *ActUser, after string, size int64) (ss []*Status) {
+func Recommendations(user *ActUser, after string, size int64) (ss []*Status, more bool) {
 	return loadStatusByLinker(stateKey("/recommended/status/"), after, size)
 }
 
-func ListStatusByLabel(value, after string, size int64) []*Status {
+func ListStatusByLabel(value, after string, size int64) ([]*Status, bool) {
 	return loadStatusByLinker(stateKey(fmt.Sprintf("/labels/%s/status/", value)), after, size)
 }
 

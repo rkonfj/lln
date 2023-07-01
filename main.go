@@ -136,3 +136,8 @@ func common(h http.Handler) http.Handler {
 	}
 	return http.HandlerFunc(fn)
 }
+
+type L struct {
+	V    any  `json:"v"`
+	More bool `json:"more"`
+}

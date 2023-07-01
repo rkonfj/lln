@@ -15,7 +15,7 @@ type StatusCommentsOptions struct {
 	SortAscend bool
 }
 
-func StatusComments(opts StatusCommentsOptions) (ss []*Status) {
+func StatusComments(opts StatusCommentsOptions) (ss []*Status, more bool) {
 	statusCommentsKey := stateKey(fmt.Sprintf("/comments/status/%s/", opts.StatusID))
 	sortOrder := clientv3.SortDescend
 	if opts.SortAscend {
@@ -34,7 +34,7 @@ func StatusComments(opts StatusCommentsOptions) (ss []*Status) {
 		logrus.Debug(err)
 		return
 	}
-
+	more = resp.More
 	for _, kv := range resp.Kvs {
 		resp, err = etcdClient.KV.Get(context.Background(), string(kv.Value))
 		if err != nil {

@@ -89,7 +89,7 @@ func (u *User) Modify(mu ModifiableUser) error {
 }
 
 // ListStatus list user all status
-func (u *User) ListStatus(after string, size int64) (ss []*Status) {
+func (u *User) ListStatus(after string, size int64) (ss []*Status, more bool) {
 	return loadStatusByLinker(stateKey(fmt.Sprintf("/%s/status/", u.ID)), after, size)
 }
 

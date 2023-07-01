@@ -27,7 +27,7 @@ func explore(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sessionUID := r.Context().Value(util.KeySessionUID).(string)
-	ss := state.Recommendations(user, r.URL.Query().Get("after"), size)
+	ss, more := state.Recommendations(user, r.URL.Query().Get("after"), size)
 	var ret []*Status
 	for _, s := range ss {
 		status := castStatus(s, sessionUID)
@@ -39,5 +39,5 @@ func explore(w http.ResponseWriter, r *http.Request) {
 		}
 		ret = append(ret, status)
 	}
-	json.NewEncoder(w).Encode(ret)
+	json.NewEncoder(w).Encode(L{V: ret, More: more})
 }
