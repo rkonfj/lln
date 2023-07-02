@@ -19,6 +19,7 @@ type Session struct {
 	UniqueName string `json:"uniqueName"`
 	Picture    string `json:"picture"`
 	Locale     string `json:"locale"`
+	Bio        string `json:"bio"`
 }
 
 func (s *Session) ToUser() *state.ActUser {

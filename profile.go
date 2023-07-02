@@ -79,6 +79,14 @@ func modifyProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(mu.Bio) > 0 {
+		if utf8.RuneCountInString(mu.Bio) > 256 {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, "bio: maximum 256 unicode characters")
+			return
+		}
+	}
+
 	if len(mu.UniqueName) > 0 {
 		if utf8.RuneCountInString(mu.UniqueName) > 12 {
 			w.WriteHeader(http.StatusBadRequest)

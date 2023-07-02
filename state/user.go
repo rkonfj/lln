@@ -25,6 +25,7 @@ type ModifiableUser struct {
 	Name       string `json:"name"`
 	Picture    string `json:"picture"`
 	Locale     string `json:"locale"`
+	Bio        string `json:"bio"`
 }
 
 type User struct {
@@ -35,6 +36,7 @@ type User struct {
 	Email      string    `json:"email"`
 	Locale     string    `json:"locale"`
 	CreateTime time.Time `json:"createTime"`
+	Bio        string    `json:"bio"`
 }
 
 // Modify apply new user props
@@ -55,7 +57,7 @@ func (u *User) Modify(mu ModifiableUser) error {
 		uniqueNameKey := stateKey(fmt.Sprintf("/%s/%s", util.UniqueName, mu.UniqueName))
 		u.UniqueName = mu.UniqueName
 
-		cmps = append(cmps, clientv3.Compare(clientv3.Version(mu.UniqueName), "=", 0))
+		cmps = append(cmps, clientv3.Compare(clientv3.Version(uniqueNameKey), "=", 0))
 		ops = append(ops, clientv3.OpDelete(oldUniqueNameKey))
 		ops = append(ops, clientv3.OpPut(uniqueNameKey, key))
 	}
@@ -70,6 +72,10 @@ func (u *User) Modify(mu ModifiableUser) error {
 
 	if len(mu.Locale) > 0 {
 		u.Locale = mu.Locale
+	}
+
+	if len(mu.Bio) > 0 {
+		u.Bio = mu.Bio
 	}
 
 	b, err := json.Marshal(u)

@@ -17,6 +17,7 @@ func Create(opts *state.UserOptions) (*Session, error) {
 		UniqueName: u.UniqueName,
 		Picture:    u.Picture,
 		Locale:     u.Locale,
+		Bio:        u.Bio,
 	}
 	DefaultSessionManager.Create(s)
 	return s, nil
