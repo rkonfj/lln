@@ -126,6 +126,18 @@ func (u *User) Followings() int64 {
 	return resp.Count
 }
 
+// Tweets tweet count
+func (u *User) Tweets() int64 {
+	resp, err := etcdClient.KV.Get(context.Background(),
+		stateKey(fmt.Sprintf("/%s/status/", u.ID)),
+		clientv3.WithPrefix(), clientv3.WithCountOnly())
+	if err != nil {
+		logrus.Errorf("Tweets etcd error: %s", err)
+		return 0
+	}
+	return resp.Count
+}
+
 func Followed(u1, u2 string) bool {
 	resp, err := etcdClient.KV.Get(context.Background(), stateKey(fmt.Sprintf(tFollowUser, u2, u1)), clientv3.WithCountOnly())
 	if err != nil {

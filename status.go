@@ -210,6 +210,19 @@ func newStatus(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	imgCount := 0
+	for _, c := range opts.Content {
+		if c.Type == "img" {
+			imgCount++
+		}
+	}
+
+	if imgCount > 4 {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(fmt.Sprintf("maximum 4 images, %d", imgCount)))
+		return
+	}
+
 	opts.Content = append(opts.Content, sf...)
 
 	s, err := state.NewStatus(opts)
