@@ -6,14 +6,13 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/rkonfj/lln/session"
 	"github.com/rkonfj/lln/state"
-	"github.com/rkonfj/lln/util"
+	"github.com/rkonfj/lln/tools"
 )
 
 func bookmarkStatus(w http.ResponseWriter, r *http.Request) {
-	ssion := r.Context().Value(util.KeySession).(*session.Session)
-	err := state.BookmarkStatus(ssion.ToUser(), chi.URLParam(r, util.StatusID))
+	ssion := r.Context().Value(tools.KeySession).(*state.Session)
+	err := state.BookmarkStatus(ssion.ToUser(), chi.URLParam(r, tools.StatusID))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
@@ -21,7 +20,7 @@ func bookmarkStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func listBookmarks(w http.ResponseWriter, r *http.Request) {
-	ssion := r.Context().Value(util.KeySession).(*session.Session)
+	ssion := r.Context().Value(tools.KeySession).(*state.Session)
 	size := int64(20)
 	sizeStr := r.URL.Query().Get("size")
 	var err error
@@ -33,7 +32,7 @@ func listBookmarks(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	ss, more := state.ListBookmarks(ssion.ToUser(), r.URL.Query().Get("after"), size)
-	sessionUID := r.Context().Value(util.KeySessionUID).(string)
+	sessionUID := r.Context().Value(tools.KeySessionUID).(string)
 	var ret []*Status
 	for _, s := range ss {
 		status := castStatus(s, sessionUID)

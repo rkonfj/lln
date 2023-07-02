@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/decred/base58"
-	"github.com/rkonfj/lln/util"
+	"github.com/rkonfj/lln/tools"
 	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -90,7 +90,7 @@ func NewStatus(opts *StatusOptions) (*Status, error) {
 	}
 
 	if len(opts.At) > 0 {
-		for _, at := range util.Unique(opts.At) {
+		for _, at := range tools.Unique(opts.At) {
 			u := UserByUniqueName(at)
 			if u != nil {
 				ops = append(ops, newMessageOps(MsgOptions{
@@ -105,7 +105,7 @@ func NewStatus(opts *StatusOptions) (*Status, error) {
 	}
 
 	if len(opts.Labels) > 0 {
-		for _, l := range util.Unique(opts.Labels) {
+		for _, l := range tools.Unique(opts.Labels) {
 			key := stateKey(fmt.Sprintf("/labels/%s/status/%s", l, s.ID))
 			ops = append(ops, clientv3.OpPut(key, statusKey))
 			key = stateKey(fmt.Sprintf("/label/%s", l))

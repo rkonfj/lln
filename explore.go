@@ -5,9 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/rkonfj/lln/session"
 	"github.com/rkonfj/lln/state"
-	"github.com/rkonfj/lln/util"
+	"github.com/rkonfj/lln/tools"
 )
 
 func explore(w http.ResponseWriter, r *http.Request) {
@@ -22,11 +21,11 @@ func explore(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	var user *state.ActUser
-	if r.Context().Value(util.KeySession) != nil {
-		user = r.Context().Value(util.KeySession).(*session.Session).ToUser()
+	if r.Context().Value(tools.KeySession) != nil {
+		user = r.Context().Value(tools.KeySession).(*state.Session).ToUser()
 	}
 
-	sessionUID := r.Context().Value(util.KeySessionUID).(string)
+	sessionUID := r.Context().Value(tools.KeySessionUID).(string)
 	ss, more := state.Recommendations(user, r.URL.Query().Get("after"), size)
 	var ret []*Status
 	for _, s := range ss {

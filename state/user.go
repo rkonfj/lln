@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/decred/base58"
-	"github.com/rkonfj/lln/util"
+	"github.com/rkonfj/lln/tools"
 	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -53,8 +53,8 @@ func (u *User) Modify(mu ModifiableUser) error {
 	ops := []clientv3.Op{}
 	cmps := []clientv3.Cmp{clientv3.Compare(clientv3.ModRevision(key), "=", resp.Kvs[0].ModRevision)}
 	if len(mu.UniqueName) > 0 {
-		oldUniqueNameKey := stateKey(fmt.Sprintf("/%s/%s", util.UniqueName, u.UniqueName))
-		uniqueNameKey := stateKey(fmt.Sprintf("/%s/%s", util.UniqueName, mu.UniqueName))
+		oldUniqueNameKey := stateKey(fmt.Sprintf("/%s/%s", tools.UniqueName, u.UniqueName))
+		uniqueNameKey := stateKey(fmt.Sprintf("/%s/%s", tools.UniqueName, mu.UniqueName))
 		u.UniqueName = mu.UniqueName
 
 		cmps = append(cmps, clientv3.Compare(clientv3.Version(uniqueNameKey), "=", 0))

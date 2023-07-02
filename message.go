@@ -5,13 +5,12 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/rkonfj/lln/session"
 	"github.com/rkonfj/lln/state"
-	"github.com/rkonfj/lln/util"
+	"github.com/rkonfj/lln/tools"
 )
 
 func listMessages(w http.ResponseWriter, r *http.Request) {
-	var ssion = r.Context().Value(util.KeySession).(*session.Session)
+	var ssion = r.Context().Value(tools.KeySession).(*state.Session)
 	after := r.URL.Query().Get("after")
 	sizeStr := r.URL.Query().Get("size")
 	size := int64(20)
@@ -33,7 +32,7 @@ func deleteMessages(w http.ResponseWriter, r *http.Request) {
 }
 
 func getNewTipMessages(w http.ResponseWriter, r *http.Request) {
-	var ssion = r.Context().Value(util.KeySession).(*session.Session)
+	var ssion = r.Context().Value(tools.KeySession).(*state.Session)
 	tipMsgs := state.ListTipMessages(ssion.ToUser(), 100)
 	json.NewEncoder(w).Encode(tipMsgs)
 }
@@ -43,7 +42,7 @@ func deleteTipMessages(w http.ResponseWriter, r *http.Request) {
 }
 
 func abstractDeleteMessages(w http.ResponseWriter, r *http.Request, doDelete func(*state.ActUser, []string) error) {
-	var ssion = r.Context().Value(util.KeySession).(*session.Session)
+	var ssion = r.Context().Value(tools.KeySession).(*state.Session)
 	msgs := []string{}
 	err := json.NewDecoder(r.Body).Decode(&msgs)
 	if err != nil {

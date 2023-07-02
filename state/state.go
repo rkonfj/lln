@@ -39,7 +39,8 @@ func InitState(opts EtcdOptions) (err error) {
 	}
 
 	etcdClient, err = clientv3.New(cfg)
-	start()
+	DefaultSessionManager = NewSessionManager()
+	startKeepConsistency()
 	return
 }
 

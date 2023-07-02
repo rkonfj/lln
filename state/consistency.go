@@ -16,8 +16,9 @@ var (
 	lastStatusCreateRev string     = stateKey("/recommended/lastrev")
 )
 
-func start() {
+func startKeepConsistency() {
 	go keepStatusUserConsistentLoop()
+	go keepSessionConsistentLoop()
 	go keepRecommendedStatusLoop()
 }
 
@@ -50,6 +51,43 @@ func keepStatusUserConsistentLoop() {
 			}
 			if !more {
 				break
+			}
+		}
+	}
+}
+
+func keepSessionConsistentLoop() {
+	rch := etcdClient.Watch(context.Background(), stateKey("/session/"),
+		clientv3.WithPrefix(), clientv3.WithPrevKV())
+	sm := DefaultSessionManager.(*PersistentSessionManager)
+	for wresp := range rch {
+		for _, ev := range wresp.Events {
+			if ev.IsCreate() {
+				s := Session{}
+				err := json.Unmarshal(ev.Kv.Value, &s)
+				if err != nil {
+					logrus.Error("[session create] invalid session struct: ", err)
+					continue
+				}
+				err = sm.MemorySessionManger.Create(&s)
+				if err != nil {
+					logrus.Error("[session create] create error: ", err)
+				}
+				logrus.Debug("[session create] synced session ", s.ApiKey)
+			}
+
+			if ev.Type == clientv3.EventTypeDelete {
+				s := Session{}
+				err := json.Unmarshal(ev.PrevKv.Value, &s)
+				if err != nil {
+					logrus.Error("[session delete] invalid session struct: ", err)
+					continue
+				}
+				err = sm.MemorySessionManger.Delete(s.ApiKey)
+				if err != nil {
+					logrus.Error("[session delete] delete error: ", err)
+				}
+				logrus.Debug("[session delete] removed session ", s.ApiKey)
 			}
 		}
 	}

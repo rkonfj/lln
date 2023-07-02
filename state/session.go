@@ -1,4 +1,4 @@
-package session
+package state
 
 import (
 	"crypto/rand"
@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/decred/base58"
-	"github.com/rkonfj/lln/state"
 	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 )
@@ -22,8 +21,8 @@ type Session struct {
 	Bio        string `json:"bio"`
 }
 
-func (s *Session) ToUser() *state.ActUser {
-	return &state.ActUser{
+func (s *Session) ToUser() *ActUser {
+	return &ActUser{
 		ID:         s.ID,
 		Name:       s.Name,
 		UniqueName: s.UniqueName,
@@ -50,6 +49,10 @@ func (sm *MemorySessionManger) Create(s *Session) error {
 	s.ApiKey = fmt.Sprintf("sk-%s", base58.Encode(append(b, xid.New().Bytes()...)))
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
+	if _, ok := sm.session[s.ApiKey]; ok {
+		logrus.Debug("session key already exists: ", s.ApiKey)
+		return nil
+	}
 	sm.session[s.ApiKey] = s
 	sm.revSession[s.ID] = append(sm.revSession[s.ID], s.ApiKey)
 	return nil
@@ -103,7 +106,8 @@ func NewSessionManager() *PersistentSessionManager {
 			revSession: make(map[string][]string),
 		},
 	}
-	err := state.IterateWithPrefix("/session", func(_ string, value []byte) {
+	sessionCount := 0
+	err := IterateWithPrefix("/session", func(_ string, value []byte) {
 		ssion := Session{}
 		err := json.Unmarshal(value, &ssion)
 		if err != nil {
@@ -112,7 +116,9 @@ func NewSessionManager() *PersistentSessionManager {
 		}
 		sm.MemorySessionManger.session[ssion.ApiKey] = &ssion
 		sm.MemorySessionManger.revSession[ssion.ID] = append(sm.MemorySessionManger.revSession[ssion.ID], ssion.ApiKey)
+		sessionCount++
 	})
+	logrus.Infof("%d sessions restored", sessionCount)
 	if err != nil {
 		logrus.Error("iterate session error: ", err)
 	}
@@ -129,7 +135,7 @@ func (sm *PersistentSessionManager) Create(s *Session) error {
 		logrus.Warn(err)
 		return nil
 	}
-	state.Put(fmt.Sprintf("/session/%s", s.ApiKey), b)
+	Put(fmt.Sprintf("/session/%s", s.ApiKey), b)
 	return nil
 }
 
@@ -137,7 +143,7 @@ func (sm *PersistentSessionManager) Expire(userID string) error {
 	apiKeys := sm.MemorySessionManger.revSession[userID]
 	logrus.Debug("expire api keys: ", apiKeys)
 	for _, key := range apiKeys {
-		err := state.Del(fmt.Sprintf("/session/%s", key))
+		err := Del(fmt.Sprintf("/session/%s", key))
 		if err != nil {
 			return err
 		}
@@ -146,9 +152,28 @@ func (sm *PersistentSessionManager) Expire(userID string) error {
 }
 
 func (sm *PersistentSessionManager) Delete(apiKey string) error {
-	err := state.Del(fmt.Sprintf("/session/%s", apiKey))
+	err := Del(fmt.Sprintf("/session/%s", apiKey))
 	if err != nil {
 		return err
 	}
 	return sm.MemorySessionManger.Delete(apiKey)
+}
+
+var DefaultSessionManager SessionManager
+
+func CreateSession(opts *UserOptions) (*Session, error) {
+	u := UserByEmail(opts.Email)
+	if u == nil {
+		u = NewUser(opts)
+	}
+	s := &Session{
+		ID:         u.ID,
+		Name:       u.Name,
+		UniqueName: u.UniqueName,
+		Picture:    u.Picture,
+		Locale:     u.Locale,
+		Bio:        u.Bio,
+	}
+	DefaultSessionManager.Create(s)
+	return s, nil
 }

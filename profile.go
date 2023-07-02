@@ -9,9 +9,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/rkonfj/lln/session"
 	"github.com/rkonfj/lln/state"
-	"github.com/rkonfj/lln/util"
+	"github.com/rkonfj/lln/tools"
 )
 
 var uniqueNameRegex = regexp.MustCompile(`^[\p{L}\d_]+$`)
@@ -25,7 +24,7 @@ type User struct {
 }
 
 func profile(w http.ResponseWriter, r *http.Request) {
-	uniqueName, err := url.PathUnescape(chi.URLParam(r, util.UniqueName))
+	uniqueName, err := url.PathUnescape(chi.URLParam(r, tools.UniqueName))
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(err.Error()))
@@ -36,8 +35,8 @@ func profile(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	sessionUID := r.Context().Value(util.KeySessionUID).(string)
-	if r.Context().Value(util.KeySessionUID) == nil || sessionUID != u.ID {
+	sessionUID := r.Context().Value(tools.KeySessionUID).(string)
+	if r.Context().Value(tools.KeySessionUID) == nil || sessionUID != u.ID {
 		// privacy
 		u.Email = ""
 		u.Locale = ""
@@ -52,8 +51,8 @@ func profile(w http.ResponseWriter, r *http.Request) {
 }
 
 func followUser(w http.ResponseWriter, r *http.Request) {
-	var ssion = r.Context().Value(util.KeySession).(*session.Session)
-	uniqueName, err := url.PathUnescape(chi.URLParam(r, util.UniqueName))
+	var ssion = r.Context().Value(tools.KeySession).(*state.Session)
+	uniqueName, err := url.PathUnescape(chi.URLParam(r, tools.UniqueName))
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(err.Error()))
@@ -67,7 +66,7 @@ func followUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func modifyProfile(w http.ResponseWriter, r *http.Request) {
-	var ssion = r.Context().Value(util.KeySession).(*session.Session)
+	var ssion = r.Context().Value(tools.KeySession).(*state.Session)
 	u := state.UserByID(ssion.ID)
 	if u == nil {
 		w.WriteHeader(http.StatusNotFound)
@@ -128,5 +127,5 @@ func modifyProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	state.UserChanged <- u
-	session.DefaultSessionManager.Expire(ssion.ID)
+	state.DefaultSessionManager.Expire(ssion.ID)
 }

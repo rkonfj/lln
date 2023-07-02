@@ -11,9 +11,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/rkonfj/lln/session"
 	"github.com/rkonfj/lln/state"
-	"github.com/rkonfj/lln/util"
+	"github.com/rkonfj/lln/tools"
 )
 
 type StatusOptions struct {
@@ -44,7 +43,7 @@ var atRegex = regexp.MustCompile(`@([\p{L}\d_]+)`)
 
 // status thread model
 func status(w http.ResponseWriter, r *http.Request) {
-	status := chainStatus(chi.URLParam(r, util.StatusID), r.Context().Value(util.KeySessionUID).(string))
+	status := chainStatus(chi.URLParam(r, tools.StatusID), r.Context().Value(tools.KeySessionUID).(string))
 	if status == nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -67,12 +66,12 @@ func statusComments(w http.ResponseWriter, r *http.Request) {
 	}
 
 	comments, more := state.StatusComments(state.StatusCommentsOptions{
-		StatusID:   chi.URLParam(r, util.StatusID),
+		StatusID:   chi.URLParam(r, tools.StatusID),
 		After:      r.URL.Query().Get("after"),
 		Size:       size,
 		SortAscend: r.URL.Query().Get("order") == "asc",
 	})
-	sessionUID := r.Context().Value(util.KeySessionUID).(string)
+	sessionUID := r.Context().Value(tools.KeySessionUID).(string)
 	var ss []*Status
 	for _, s := range comments {
 		ss = append(ss, castStatus(s, sessionUID))
@@ -104,14 +103,14 @@ func userStatus(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	uniqueName, err := url.PathUnescape(chi.URLParam(r, util.UniqueName))
+	uniqueName, err := url.PathUnescape(chi.URLParam(r, tools.UniqueName))
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(err.Error()))
 		return
 	}
 	ss, more := state.UserStatus(uniqueName, r.URL.Query().Get("after"), size)
-	sessionUID := r.Context().Value(util.KeySessionUID).(string)
+	sessionUID := r.Context().Value(tools.KeySessionUID).(string)
 	var ret []*Status
 	for _, s := range ss {
 		status := castStatus(s, sessionUID)
@@ -127,8 +126,8 @@ func userStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func likeStatus(w http.ResponseWriter, r *http.Request) {
-	var ssion = r.Context().Value(util.KeySession).(*session.Session)
-	err := state.LikeStatus(ssion.ToUser(), chi.URLParam(r, util.StatusID))
+	var ssion = r.Context().Value(tools.KeySession).(*state.Session)
+	err := state.LikeStatus(ssion.ToUser(), chi.URLParam(r, tools.StatusID))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
@@ -136,7 +135,7 @@ func likeStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func newStatus(w http.ResponseWriter, r *http.Request) {
-	var ssion = r.Context().Value(util.KeySession).(*session.Session)
+	var ssion = r.Context().Value(tools.KeySession).(*state.Session)
 	req := &StatusOptions{}
 	err := json.NewDecoder(r.Body).Decode(req)
 	if err != nil {
@@ -235,7 +234,7 @@ func newStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func deleteStatus(w http.ResponseWriter, r *http.Request) {
-	err := state.DeleteStatus(r.Context().Value(util.KeySessionUID).(string), chi.URLParam(r, util.StatusID))
+	err := state.DeleteStatus(r.Context().Value(tools.KeySessionUID).(string), chi.URLParam(r, tools.StatusID))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))

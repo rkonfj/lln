@@ -8,9 +8,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/rkonfj/lln/session"
 	"github.com/rkonfj/lln/state"
-	"github.com/rkonfj/lln/util"
+	"github.com/rkonfj/lln/tools"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -57,11 +56,6 @@ func initAction(cmd *cobra.Command, args []string) error {
 		KeyFile:       config.State.Etcd.KeyFile,
 		TrustedCAFile: config.State.Etcd.TrustedCAFile,
 	})
-	if err != nil {
-		return err
-	}
-
-	err = session.InitSession()
 	return err
 }
 
@@ -72,9 +66,9 @@ func startAction(cmd *cobra.Command, args []string) error {
 
 	r.Route("/i", func(r chi.Router) {
 		r.Use(common, security)
-		r.Post(fmt.Sprintf("/like/status/{%s}", util.StatusID), likeStatus)
-		r.Post(fmt.Sprintf("/follow/user/{%s}", util.UniqueName), followUser)
-		r.Post(fmt.Sprintf("/bookmark/status/{%s}", util.StatusID), bookmarkStatus)
+		r.Post(fmt.Sprintf("/like/status/{%s}", tools.StatusID), likeStatus)
+		r.Post(fmt.Sprintf("/follow/user/{%s}", tools.UniqueName), followUser)
+		r.Post(fmt.Sprintf("/bookmark/status/{%s}", tools.StatusID), bookmarkStatus)
 		r.Post("/status", newStatus)
 		r.Put("/profile", modifyProfile)
 		r.Get("/bookmarks", listBookmarks)
@@ -83,18 +77,18 @@ func startAction(cmd *cobra.Command, args []string) error {
 		r.Delete("/messages", deleteMessages)
 		r.Delete("/messages/tips", deleteTipMessages)
 		r.Delete("/authorize", deleteAuthorize)
-		r.Delete(fmt.Sprintf("/status/{%s}", util.StatusID), deleteStatus)
+		r.Delete(fmt.Sprintf("/status/{%s}", tools.StatusID), deleteStatus)
 	})
 
 	r.Route("/o", func(r chi.Router) {
 		r.Use(common)
-		r.Post(fmt.Sprintf("/authorize/{%s}", util.Provider), authorize)
-		r.Get(fmt.Sprintf("/authorize/{%s}", util.Provider), authorize)
-		r.Get(fmt.Sprintf("/oidc/{%s}", util.Provider), oidcRedirect)
-		r.Get(fmt.Sprintf("/user/{%s}", util.UniqueName), profile)
-		r.Get(fmt.Sprintf("/user/{%s}/status", util.UniqueName), userStatus)
-		r.Get(fmt.Sprintf("/status/{%s}", util.StatusID), status)
-		r.Get(fmt.Sprintf("/status/{%s}/comments", util.StatusID), statusComments)
+		r.Post(fmt.Sprintf("/authorize/{%s}", tools.Provider), authorize)
+		r.Get(fmt.Sprintf("/authorize/{%s}", tools.Provider), authorize)
+		r.Get(fmt.Sprintf("/oidc/{%s}", tools.Provider), oidcRedirect)
+		r.Get(fmt.Sprintf("/user/{%s}", tools.UniqueName), profile)
+		r.Get(fmt.Sprintf("/user/{%s}/status", tools.UniqueName), userStatus)
+		r.Get(fmt.Sprintf("/status/{%s}", tools.StatusID), status)
+		r.Get(fmt.Sprintf("/status/{%s}/comments", tools.StatusID), statusComments)
 		r.Get("/search", search)
 		r.Get("/explore", explore)
 		r.Get("/labels", labels)
@@ -109,7 +103,7 @@ func security(h http.Handler) http.Handler {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-		ssion := session.DefaultSessionManager.Load(apiKey)
+		ssion := state.DefaultSessionManager.Load(apiKey)
 		if ssion == nil {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
@@ -123,14 +117,14 @@ func common(h http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		apiKey := r.Header.Get("Authorization")
 		w.Header().Add("X-Session-Valid", fmt.Sprintf("%t", len(apiKey) > 0 &&
-			session.DefaultSessionManager.Load(apiKey) != nil))
-		ssion := session.DefaultSessionManager.Load(apiKey)
+			state.DefaultSessionManager.Load(apiKey) != nil))
+		ssion := state.DefaultSessionManager.Load(apiKey)
 		ctx := r.Context()
 		if ssion != nil {
-			ctx = context.WithValue(ctx, util.KeySession, ssion)
-			ctx = context.WithValue(ctx, util.KeySessionUID, ssion.ID)
+			ctx = context.WithValue(ctx, tools.KeySession, ssion)
+			ctx = context.WithValue(ctx, tools.KeySessionUID, ssion.ID)
 		} else {
-			ctx = context.WithValue(ctx, util.KeySessionUID, "")
+			ctx = context.WithValue(ctx, tools.KeySessionUID, "")
 		}
 		h.ServeHTTP(w, r.WithContext(ctx))
 	}

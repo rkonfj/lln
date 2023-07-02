@@ -9,13 +9,12 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/decred/base58"
 	"github.com/go-chi/chi/v5"
-	"github.com/rkonfj/lln/session"
 	"github.com/rkonfj/lln/state"
-	"github.com/rkonfj/lln/util"
+	"github.com/rkonfj/lln/tools"
 )
 
 func authorize(w http.ResponseWriter, r *http.Request) {
-	providerName := chi.URLParam(r, util.Provider)
+	providerName := chi.URLParam(r, tools.Provider)
 	provider := getProvider(providerName)
 	if provider == nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -64,7 +63,7 @@ func authorize(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("unverified email"))
 		return
 	}
-	sessionObj, err := session.Create(&state.UserOptions{
+	sessionObj, err := state.CreateSession(&state.UserOptions{
 		Name:    claims.Name,
 		Picture: claims.Picture,
 		Email:   claims.Email,
@@ -85,14 +84,14 @@ func authorize(w http.ResponseWriter, r *http.Request) {
 }
 
 func deleteAuthorize(w http.ResponseWriter, r *http.Request) {
-	if r.Context().Value(util.KeySession) == nil {
+	if r.Context().Value(tools.KeySession) == nil {
 		return
 	}
-	session.DefaultSessionManager.Delete(r.Header.Get("Authorization"))
+	state.DefaultSessionManager.Delete(r.Header.Get("Authorization"))
 }
 
 func oidcRedirect(w http.ResponseWriter, r *http.Request) {
-	providerName := chi.URLParam(r, util.Provider)
+	providerName := chi.URLParam(r, tools.Provider)
 	provider := getProvider(providerName)
 	if provider == nil {
 		w.WriteHeader(http.StatusBadRequest)

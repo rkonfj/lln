@@ -1,5 +1,6 @@
-package util
+package tools
 
+// Unique distinct slice
 func Unique(slice []string) []string {
 	encountered := map[string]bool{}
 	result := []string{}
