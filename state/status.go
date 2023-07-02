@@ -66,17 +66,17 @@ func NewStatus(opts *StatusOptions) (*Status, error) {
 	statusKey := stateKey(fmt.Sprintf("/status/%s", s.ID))
 	userStatusKey := stateKey(fmt.Sprintf("/%s/status/%s", s.User.ID, s.ID))
 	statusCommentsKey := stateKey(fmt.Sprintf("/comments/status/%s/%s", s.RefStatus, s.ID))
-	statusCommentPlaceholerKey := stateKey(fmt.Sprintf("/placeholer/status/%s", s.ID))
+	statusProbeKey := stateKey(fmt.Sprintf("/probe/status/%s", s.ID))
 	ops := []clientv3.Op{
 		clientv3.OpPut(statusKey, string(b)),
 		clientv3.OpPut(userStatusKey, statusKey),
-		clientv3.OpPut(statusCommentPlaceholerKey, s.ID),
+		clientv3.OpPut(statusProbeKey, s.ID),
 	}
 
 	if len(s.RefStatus) > 0 {
-		refCommentPlaceholerKey := stateKey(fmt.Sprintf("/placeholer/status/%s", s.RefStatus))
+		refProbeKey := stateKey(fmt.Sprintf("/probe/status/%s", s.RefStatus))
 		ops = append(ops, clientv3.OpPut(statusCommentsKey, statusKey))
-		ops = append(ops, clientv3.OpPut(refCommentPlaceholerKey, s.ID))
+		ops = append(ops, clientv3.OpPut(refProbeKey, s.ID))
 		s := GetStatus(s.RefStatus)
 		if s != nil {
 			ops = append(ops, newMessageOps(MsgOptions{
@@ -122,8 +122,8 @@ func NewStatus(opts *StatusOptions) (*Status, error) {
 }
 
 func DeleteStatus(uid, statusID string) error {
-	statusCommentPlaceholerKey := stateKey(fmt.Sprintf("/placeholer/status/%s", statusID))
-	resp, err := etcdClient.KV.Get(context.Background(), statusCommentPlaceholerKey)
+	statusProbeKey := stateKey(fmt.Sprintf("/probe/status/%s", statusID))
+	resp, err := etcdClient.KV.Get(context.Background(), statusProbeKey)
 	if err != nil {
 		return err
 	}
@@ -131,10 +131,17 @@ func DeleteStatus(uid, statusID string) error {
 	if resp.Count > 0 {
 		// disable delete when comments count greater than 0
 		if string(resp.Kvs[0].Value) != statusID {
-			return errors.New("quote is exists")
+			statusCommentsKey := stateKey(fmt.Sprintf("/comments/status/%s", statusID))
+			r, err := etcdClient.Get(context.Background(), statusCommentsKey,
+				clientv3.WithCountOnly(), clientv3.WithPrefix())
+			if err != nil || r.Count != 0 {
+				logrus.Error("", err)
+				return errors.New("there are quotes")
+			}
 		}
+		// there are no new comments when executing txn
 		cmps = append(cmps, clientv3.Compare(
-			clientv3.ModRevision(statusCommentPlaceholerKey), "=", resp.Kvs[0].ModRevision))
+			clientv3.ModRevision(statusProbeKey), "=", resp.Kvs[0].ModRevision))
 	}
 
 	s := GetStatus(statusID)
@@ -148,7 +155,7 @@ func DeleteStatus(uid, statusID string) error {
 	txnResp, err := etcdClient.Txn(context.Background()).If(cmps...).
 		Then(clientv3.OpDelete(statusKey),
 			clientv3.OpDelete(userStatusKey),
-			clientv3.OpDelete(statusCommentPlaceholerKey),
+			clientv3.OpDelete(statusProbeKey),
 			clientv3.OpDelete(statusCommentsKey),
 			clientv3.OpPut(statusRecycleKey, string(b))).Commit()
 	if err != nil {
@@ -157,7 +164,7 @@ func DeleteStatus(uid, statusID string) error {
 
 	if !txnResp.Succeeded {
 		// disable delete when comments count greater than 0
-		return errors.New("quote is exists")
+		return errors.New("there are quotes")
 	}
 	return nil
 }
