@@ -21,6 +21,7 @@ type EtcdOptions struct {
 }
 
 func InitState(opts EtcdOptions) (err error) {
+	logrus.Info("initializing state component")
 	cfg := clientv3.Config{
 		Endpoints:   opts.Endpoints,
 		DialTimeout: 5 * time.Second,
@@ -75,7 +76,9 @@ func Del(key string) error {
 func IterateWithPrefix(prefix string, handle func(key string, value []byte)) error {
 	var lastCreateRev int64
 	for {
-		resp, err := etcdClient.KV.Get(context.Background(), stateKey(prefix),
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		resp, err := etcdClient.KV.Get(ctx, stateKey(prefix),
 			clientv3.WithPrefix(),
 			clientv3.WithLimit(1024),
 			clientv3.WithMinCreateRev(lastCreateRev+1))

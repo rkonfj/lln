@@ -120,7 +120,7 @@ func NewSessionManager() *PersistentSessionManager {
 	})
 	logrus.Infof("%d sessions restored", sessionCount)
 	if err != nil {
-		logrus.Error("iterate session error: ", err)
+		logrus.Error("restore session error: ", err)
 	}
 	return sm
 }

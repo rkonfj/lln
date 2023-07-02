@@ -18,6 +18,7 @@ func main() {
 	cmd := &cobra.Command{
 		Use:     "lln",
 		Short:   "A twitterlike api server",
+		Version: fmt.Sprintf("%s, commit %s", tools.Version, tools.Commit),
 		Args:    cobra.NoArgs,
 		PreRunE: initAction,
 		RunE:    startAction,
@@ -93,6 +94,7 @@ func startAction(cmd *cobra.Command, args []string) error {
 		r.Get("/explore", explore)
 		r.Get("/labels", labels)
 	})
+	logrus.Infof("listen %s for http now", config.Listen)
 	return http.ListenAndServe(config.Listen, r)
 }
 

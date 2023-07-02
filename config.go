@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"os"
+	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/sirupsen/logrus"
@@ -56,6 +57,7 @@ var (
 )
 
 func loadConfig(configPath string) error {
+	logrus.Info("loading config from ", configPath)
 	config = &Config{}
 	configF, err := os.Open(configPath)
 	if err != nil {
@@ -78,9 +80,11 @@ func loadConfig(configPath string) error {
 	}
 
 	for _, o := range config.OIDC {
-		provider, err := oidc.NewProvider(context.Background(), o.Issuer)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		provider, err := oidc.NewProvider(ctx, o.Issuer)
 		if err != nil {
-			logrus.Error(err)
+			logrus.Error("oidc component error: ", err)
 			continue
 		}
 
