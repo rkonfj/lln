@@ -2,8 +2,12 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
 	"os"
 	"time"
+	"unicode/utf8"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/sirupsen/logrus"
@@ -47,8 +51,35 @@ type ModelConfig struct {
 }
 
 type StatusConfig struct {
-	ContentListLimit int `yaml:"contentListLimit"`
-	ContentLimit     int `yaml:"contentLimit"`
+	ContentListLimit int `yaml:"contentListLimit" json:"contentListLimit"`
+	ContentLimit     int `yaml:"contentLimit" json:"contentLimit"`
+	OverviewLimit    int `yaml:"overviewLimit" json:"overviewLimit"`
+}
+
+func (c *StatusConfig) RestrictContent(content string) error {
+	count := utf8.RuneCountInString(content)
+	if count > c.ContentLimit {
+		return fmt.Errorf("maximum %d unicode characters per paragraph, %d",
+			c.ContentLimit, count)
+	}
+	return nil
+}
+
+func (c *StatusConfig) RestrictContentList(contentListSize int) error {
+	if contentListSize > config.Model.Status.ContentListLimit {
+		return fmt.Errorf("maximum %d content blocks, %d",
+			c.ContentListLimit, contentListSize)
+	}
+	return nil
+}
+
+func (c *StatusConfig) RestrictOverview(content string) error {
+	count := utf8.RuneCountInString(content)
+	if count > c.ContentLimit {
+		return fmt.Errorf("maximum %d unicode characters in status overview, %d",
+			c.OverviewLimit, count)
+	}
+	return nil
 }
 
 var (
@@ -73,8 +104,12 @@ func loadConfig(configPath string) error {
 		config.State.Etcd = &EtcdConfig{Endpoints: []string{"http://127.0.0.1:2379"}}
 	}
 
+	if config.Model.Status.OverviewLimit == 0 {
+		config.Model.Status.OverviewLimit = 256
+	}
+
 	if config.Model.Status.ContentLimit == 0 {
-		config.Model.Status.ContentLimit = 380
+		config.Model.Status.ContentLimit = 4096
 	}
 
 	if config.Model.Status.ContentListLimit == 0 {
@@ -108,4 +143,14 @@ func loadConfig(configPath string) error {
 
 func getProvider(provider string) *OIDCProvider {
 	return oidcProviders[provider]
+}
+
+type Restriction struct {
+	Status StatusConfig `json:"status"`
+}
+
+func getRestriction(w http.ResponseWriter, r *http.Request) {
+	json.NewEncoder(w).Encode(Restriction{
+		Status: config.Model.Status,
+	})
 }

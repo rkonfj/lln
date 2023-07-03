@@ -75,6 +75,7 @@ func startAction(cmd *cobra.Command, args []string) error {
 		r.Get("/bookmarks", listBookmarks)
 		r.Get("/messages", listMessages)
 		r.Get("/messages/tips", getNewTipMessages)
+		r.Get("/restriction", getRestriction)
 		r.Delete("/messages", deleteMessages)
 		r.Delete("/messages/tips", deleteTipMessages)
 		r.Delete("/authorize", deleteAuthorize)

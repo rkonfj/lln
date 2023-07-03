@@ -7,7 +7,6 @@ import (
 	"net/url"
 	"regexp"
 	"time"
-	"unicode/utf8"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/rkonfj/lln/state"
@@ -136,23 +135,22 @@ func newStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Content == nil {
+	if req.Content == nil || len(req.Content) == 0 {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("content is required"))
 		return
 	}
 
-	if len(req.Content) > config.Model.Status.ContentListLimit {
+	if err := config.Model.Status.RestrictContentList(len(req.Content)); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(fmt.Sprintf("maximum 20 content blocks, %d", len(req.Content))))
+		fmt.Fprint(w, err.Error())
 		return
 	}
 
 	for _, f := range req.Content {
-		count := utf8.RuneCountInString(f.Value)
-		if count > config.Model.Status.ContentLimit {
+		if err := config.Model.Status.RestrictContent(f.Value); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(fmt.Sprintf("maximum 380 unicode characters per paragraph, %d", count)))
+			fmt.Fprint(w, err.Error())
 			return
 		}
 	}
@@ -163,10 +161,19 @@ func newStatus(w http.ResponseWriter, r *http.Request) {
 		User:      ssion.ToUser(),
 		Labels:    []string{},
 	}
+	var overviewRestricted bool
 	var sf []*state.StatusFragment
 	for _, f := range opts.Content {
 		if f.Type != "text" {
 			continue
+		}
+		if !overviewRestricted {
+			if err := config.Model.Status.RestrictOverview(f.Value); err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				fmt.Fprint(w, err.Error())
+				return
+			}
+			overviewRestricted = true
 		}
 		// process labels
 		matches := labelsRegex.FindAllStringSubmatch(f.Value, -1)
