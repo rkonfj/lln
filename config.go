@@ -59,14 +59,16 @@ var (
 func loadConfig(configPath string) error {
 	logrus.Info("loading config from ", configPath)
 	config = &Config{}
-	configF, err := os.Open(configPath)
+	b, err := os.ReadFile(configPath)
 	if err != nil {
 		return err
 	}
-	err = yaml.NewDecoder(configF).Decode(config)
+
+	err = yaml.Unmarshal([]byte(os.ExpandEnv(string(b))), config)
 	if err != nil {
 		return err
 	}
+
 	if config.State.Etcd == nil {
 		config.State.Etcd = &EtcdConfig{Endpoints: []string{"http://127.0.0.1:2379"}}
 	}

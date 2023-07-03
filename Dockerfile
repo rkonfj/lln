@@ -8,5 +8,7 @@ RUN go build -ldflags "-s -w -X '$gomod/tools.Version=$version' -X '$gomod/tools
 
 FROM alpine:3.18
 WORKDIR /root
+ADD config.yml /etc/lln.yml
 COPY --from=builder /lln/lln /usr/bin/lln
 ENTRYPOINT ["/usr/bin/lln"]
+CMD ["-c", "/etc/lln.yml"]

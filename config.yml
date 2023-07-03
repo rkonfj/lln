@@ -2,16 +2,16 @@ listen: 127.0.0.1:8876
 oidc:
 - provider: google
   issuer: https://accounts.google.com
-  clientID: xxx
-  clientSecret: xxx
-  redirect: https://api.lowlevelnews.com/authorize/google
+  clientID: ${OIDC_GOOGLE_CLIENT_ID}
+  clientSecret: ${OIDC_GOOGLE_CLIENT_SECRET}
+  redirect: ${OIDC_GOOGLE_REDIRECT}
   scopes:
     - profile
     - email
 state:
   etcd:
     endpoints:
-      - https://172.18.20.6:2379
+      - http://127.0.0.1:2379
     certFile: 
     keyFile:
     trustedCAFile: 
