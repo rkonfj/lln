@@ -16,8 +16,8 @@ func listMessages(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(err.Error()))
 		return
 	}
-	msgs := state.ListMessages(ssion.ToUser(), opts)
-	json.NewEncoder(w).Encode(msgs)
+	msgs, more := state.ListMessages(ssion.ToUser(), opts)
+	json.NewEncoder(w).Encode(L{V: msgs, More: more})
 }
 
 func deleteMessages(w http.ResponseWriter, r *http.Request) {
@@ -27,7 +27,7 @@ func deleteMessages(w http.ResponseWriter, r *http.Request) {
 func getNewTipMessages(w http.ResponseWriter, r *http.Request) {
 	var ssion = r.Context().Value(tools.KeySession).(*state.Session)
 	tipMsgs := state.ListTipMessages(ssion.ToUser(), 100)
-	json.NewEncoder(w).Encode(tipMsgs)
+	json.NewEncoder(w).Encode(L{V: tipMsgs})
 }
 
 func deleteTipMessages(w http.ResponseWriter, r *http.Request) {

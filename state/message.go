@@ -30,7 +30,7 @@ type Message struct {
 	CreateTime time.Time `json:"createTime"`
 }
 
-func ListMessages(user *ActUser, opts *tools.PaginationOptions) (msgs []*Message) {
+func ListMessages(user *ActUser, opts *tools.PaginationOptions) (msgs []*Message, more bool) {
 	ops := []clientv3.OpOption{
 		clientv3.WithLimit(opts.Size),
 		clientv3.WithPrefix(),
@@ -49,6 +49,7 @@ func ListMessages(user *ActUser, opts *tools.PaginationOptions) (msgs []*Message
 		logrus.Error("ListMessages etcd error: ", err)
 		return
 	}
+	more = resp.More
 	for _, kv := range resp.Kvs {
 		msg := &Message{}
 		err = json.Unmarshal(kv.Value, msg)
