@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
 
 	"github.com/rkonfj/lln/state"
 	"github.com/rkonfj/lln/tools"
@@ -11,19 +10,13 @@ import (
 
 func listMessages(w http.ResponseWriter, r *http.Request) {
 	var ssion = r.Context().Value(tools.KeySession).(*state.Session)
-	after := r.URL.Query().Get("after")
-	sizeStr := r.URL.Query().Get("size")
-	size := int64(20)
-	if len(sizeStr) > 0 {
-		var err error
-		size, err = strconv.ParseInt(sizeStr, 10, 64)
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(err.Error()))
-			return
-		}
+	opts, err := tools.URLPaginationOptions(r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
 	}
-	msgs := state.ListMessages(ssion.ToUser(), after, size)
+	msgs := state.ListMessages(ssion.ToUser(), opts)
 	json.NewEncoder(w).Encode(msgs)
 }
 

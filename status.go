@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
-	"strconv"
 	"time"
 	"unicode/utf8"
 
@@ -53,24 +52,14 @@ func status(w http.ResponseWriter, r *http.Request) {
 
 // statusComments thread comments model
 func statusComments(w http.ResponseWriter, r *http.Request) {
-	size := int64(20)
-	sizeStr := r.URL.Query().Get("size")
-	var err error
-	if len(sizeStr) > 0 {
-		size, err = strconv.ParseInt(sizeStr, 10, 64)
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(err.Error()))
-			return
-		}
+	opts, err := tools.URLPaginationOptions(r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
 	}
 
-	comments, more := state.StatusComments(state.StatusCommentsOptions{
-		StatusID:   chi.URLParam(r, tools.StatusID),
-		After:      r.URL.Query().Get("after"),
-		Size:       size,
-		SortAscend: r.URL.Query().Get("order") == "asc",
-	})
+	comments, more := state.StatusComments(chi.URLParam(r, tools.StatusID), opts)
 	sessionUID := r.Context().Value(tools.KeySessionUID).(string)
 	var ss []*Status
 	for _, s := range comments {
@@ -92,24 +81,27 @@ func chainStatus(statusID, sessionUID string) *Status {
 }
 
 func userStatus(w http.ResponseWriter, r *http.Request) {
-	sizeStr := r.URL.Query().Get("size")
-	size := int64(20)
-	var err error
-	if len(sizeStr) > 0 {
-		size, err = strconv.ParseInt(sizeStr, 10, 64)
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(err.Error()))
-			return
-		}
+	opts, err := tools.URLPaginationOptions(r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
 	}
+
 	uniqueName, err := url.PathUnescape(chi.URLParam(r, tools.UniqueName))
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(err.Error()))
 		return
 	}
-	ss, more := state.UserStatus(uniqueName, r.URL.Query().Get("after"), size)
+
+	u := state.UserByUniqueName(uniqueName)
+	if u == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	ss, more := u.ListStatus(opts)
 	sessionUID := r.Context().Value(tools.KeySessionUID).(string)
 	var ret []*Status
 	for _, s := range ss {

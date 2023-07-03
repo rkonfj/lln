@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/rkonfj/lln/tools"
 	"github.com/sirupsen/logrus"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
@@ -38,8 +39,8 @@ func BookmarkStatus(user *ActUser, statusID string) error {
 	return err
 }
 
-func ListBookmarks(user *ActUser, after string, size int64) ([]*Status, bool) {
-	return loadStatusByLinker(stateKey(fmt.Sprintf("/bookmark/%s", user.ID)), after, size)
+func ListBookmarks(user *ActUser, opts *tools.PaginationOptions) ([]*Status, bool) {
+	return loadStatusByLinkerPagination(stateKey(fmt.Sprintf("/bookmark/%s", user.ID)), opts)
 }
 
 func Bookmarked(statusID, uid string) bool {

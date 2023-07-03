@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/rkonfj/lln/tools"
 	"github.com/sirupsen/logrus"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/concurrency"
@@ -24,15 +25,15 @@ func startKeepConsistency() {
 
 func keepStatusUserConsistentLoop() {
 	for e := range UserChanged {
-		lastKey := ""
+		lastRev := int64(0)
 		for {
-			ss, more := e.ListStatus(lastKey, 20)
+			ss, more := e.ListStatus(&tools.PaginationOptions{After: lastRev, Size: 20})
 			if ss == nil {
 				break
 			}
 			for i, s := range ss {
 				if i == len(ss)-1 {
-					lastKey = s.ID
+					lastRev = s.CreateRev
 				}
 				if s.User.Name != e.Name || s.User.UniqueName != e.UniqueName {
 					key := stateKey(fmt.Sprintf("/status/%s", s.ID))

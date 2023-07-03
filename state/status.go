@@ -195,21 +195,26 @@ func GetStatus(statusID string) *Status {
 	return s
 }
 
-func UserStatus(uniqueName, after string, size int64) ([]*Status, bool) {
-	return UserByUniqueName(uniqueName).ListStatus(after, size)
-}
-
-func loadStatusByLinker(key, after string, size int64) (ss []*Status, more bool) {
+func loadStatusByLinkerPagination(prefixKey string, options *tools.PaginationOptions) (ss []*Status, more bool) {
+	if options == nil {
+		options = &tools.PaginationOptions{}
+	}
 	opts := []clientv3.OpOption{
 		clientv3.WithPrefix(),
-		clientv3.WithLimit(size),
-		clientv3.WithSort(clientv3.SortByKey, clientv3.SortDescend)}
-	if len(after) > 0 {
-		opts = append(opts, clientv3.WithRange(key+after))
+		clientv3.WithLimit(options.Size),
 	}
-	resp, err := etcdClient.KV.Get(context.Background(), key, opts...)
+	if options.Ascend {
+		opts = append(opts, clientv3.WithMinCreateRev(options.After+1))
+		opts = append(opts, clientv3.WithSort(clientv3.SortByCreateRevision, clientv3.SortAscend))
+	} else {
+		if options.After > 0 {
+			opts = append(opts, clientv3.WithMaxCreateRev(options.After-1))
+		}
+		opts = append(opts, clientv3.WithSort(clientv3.SortByCreateRevision, clientv3.SortDescend))
+	}
+	resp, err := etcdClient.KV.Get(context.Background(), prefixKey, opts...)
 	if err != nil {
-		logrus.Debug(err)
+		logrus.Errorf("prefix %s pagination etcd error: %s", prefixKey, err)
 		return
 	}
 	for _, kv := range resp.Kvs {
@@ -219,10 +224,10 @@ func loadStatusByLinker(key, after string, size int64) (ss []*Status, more bool)
 			continue
 		}
 		if len(r.Kvs) == 0 {
-			logrus.Error("not found ", string(kv.Value))
+			logrus.Errorf("not found %s -> %s ", string(kv.Key), string(kv.Value))
 			continue
 		}
-		s, err := unmarshalStatus(r.Kvs[0].Value, r.Kvs[0].CreateRevision)
+		s, err := unmarshalStatus(r.Kvs[0].Value, kv.CreateRevision)
 		if err != nil {
 			logrus.Error(err)
 			continue
@@ -232,15 +237,25 @@ func loadStatusByLinker(key, after string, size int64) (ss []*Status, more bool)
 	return ss, resp.More
 }
 
-func Recommendations(user *ActUser, after string, size int64) (ss []*Status, more bool) {
-	return loadStatusByLinker(stateKey("/recommended/status/"), after, size)
+func Recommendations(user *ActUser, opts *tools.PaginationOptions) (ss []*Status, more bool) {
+	return loadStatusByLinkerPagination(stateKey("/recommended/status/"), opts)
 }
 
-func ListStatusByLabel(value, after string, size int64) ([]*Status, bool) {
-	return loadStatusByLinker(stateKey(fmt.Sprintf("/labels/%s/status/", value)), after, size)
+func RecommendCount(user *ActUser, createRev int64) int {
+	resp, err := etcdClient.KV.Get(context.Background(), stateKey("/recommended/status/"),
+		clientv3.WithPrefix(), clientv3.WithLimit(128), clientv3.WithMinCreateRev(createRev+1))
+	if err != nil {
+		logrus.Error("RecommendCount etcd error: ", err)
+		return 0
+	}
+	return len(resp.Kvs)
 }
 
-func ListStatusByKeyword(value, after string, size int64) []*Status {
+func ListStatusByLabel(value string, opts *tools.PaginationOptions) ([]*Status, bool) {
+	return loadStatusByLinkerPagination(stateKey(fmt.Sprintf("/labels/%s/status/", value)), opts)
+}
+
+func ListStatusByKeyword(value string, opts *tools.PaginationOptions) []*Status {
 	return nil
 }
 

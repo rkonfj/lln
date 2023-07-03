@@ -92,6 +92,7 @@ func startAction(cmd *cobra.Command, args []string) error {
 		r.Get(fmt.Sprintf("/status/{%s}/comments", tools.StatusID), statusComments)
 		r.Get("/search", search)
 		r.Get("/explore", explore)
+		r.Get("/explore/news-probe", exploreNewsProbe)
 		r.Get("/labels", labels)
 	})
 	logrus.Infof("listen %s for http now", config.Listen)
@@ -134,6 +135,12 @@ func common(h http.Handler) http.Handler {
 }
 
 type L struct {
-	V    any  `json:"v"`
-	More bool `json:"more"`
+	V    any    `json:"v"`
+	Code uint16 `json:"code"`
+	More bool   `json:"more"`
+}
+
+type R struct {
+	V    any    `json:"v"`
+	Code uint16 `json:"code"`
 }

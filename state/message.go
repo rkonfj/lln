@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/decred/base58"
+	"github.com/rkonfj/lln/tools"
 	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -29,24 +30,30 @@ type Message struct {
 	CreateTime time.Time `json:"createTime"`
 }
 
-func ListMessages(user *ActUser, after string, size int64) (msgs []*Message) {
+func ListMessages(user *ActUser, opts *tools.PaginationOptions) (msgs []*Message) {
 	ops := []clientv3.OpOption{
-		clientv3.WithLimit(size),
+		clientv3.WithLimit(opts.Size),
 		clientv3.WithPrefix(),
-		clientv3.WithSort(clientv3.SortByCreateRevision, clientv3.SortDescend)}
-	if len(after) > 0 {
-		ops = append(ops, clientv3.WithRange(stateKey(fmt.Sprintf("/message/%s/%s", user.ID, after))))
+	}
+	if opts.Ascend {
+		ops = append(ops, clientv3.WithMinCreateRev(opts.After+1))
+		ops = append(ops, clientv3.WithSort(clientv3.SortByCreateRevision, clientv3.SortAscend))
+	} else {
+		if opts.After > 0 {
+			ops = append(ops, clientv3.WithMaxCreateRev(opts.After-1))
+		}
+		ops = append(ops, clientv3.WithSort(clientv3.SortByCreateRevision, clientv3.SortDescend))
 	}
 	resp, err := etcdClient.KV.Get(context.Background(), stateKey(fmt.Sprintf("/message/%s/", user.ID)), ops...)
 	if err != nil {
-		logrus.Debug(err)
+		logrus.Error("ListMessages etcd error: ", err)
 		return
 	}
 	for _, kv := range resp.Kvs {
 		msg := &Message{}
 		err = json.Unmarshal(kv.Value, msg)
 		if err != nil {
-			logrus.Debug(err)
+			logrus.Error("ListMessages unmarshal error: ", err)
 			continue
 		}
 		msgs = append(msgs, msg)
