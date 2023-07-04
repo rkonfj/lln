@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/rkonfj/lln/state"
 	"github.com/rkonfj/lln/tools"
+	"github.com/sirupsen/logrus"
 )
 
 func authorize(w http.ResponseWriter, r *http.Request) {
@@ -51,6 +52,8 @@ func authorize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	logrus.Debugf("oauth2 user info: %s", profile)
+
 	opts := &state.UserOptions{}
 	if v, ok := profile[provider.UserMeta.Name]; ok && v != nil {
 		opts.Name = v.(string)
@@ -66,6 +69,12 @@ func authorize(w http.ResponseWriter, r *http.Request) {
 	}
 	if v, ok := profile[provider.UserMeta.Bio]; ok && v != nil {
 		opts.Bio = v.(string)
+	}
+
+	if len(opts.Email) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "email is required")
+		return
 	}
 
 	sessionObj, err := state.CreateSession(opts)
