@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/decred/base58"
 	"github.com/go-chi/chi/v5"
 	"github.com/rkonfj/lln/state"
@@ -21,6 +20,7 @@ func authorize(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(fmt.Sprintf("provider %s not supported", providerName)))
 		return
 	}
+
 	oauth2Token, err := provider.Config.Exchange(context.Background(), r.URL.Query().Get("code"))
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -28,50 +28,50 @@ func authorize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Extract the ID Token from OAuth2 token.
-	rawIDToken, ok := oauth2Token.Extra("id_token").(string)
-	if !ok {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("missing token"))
-		return
-	}
-
-	// Parse and verify ID Token payload.
-	idToken, err := provider.Provider.Verifier(&oidc.Config{ClientID: provider.Config.ClientID}).
-		Verify(context.Background(), rawIDToken)
+	u, err := provider.Provider.UserInfo(context.Background(),
+		provider.Config.TokenSource(context.Background(), oauth2Token))
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "get userInfo error: %s", err.Error())
 		return
 	}
 
-	// Extract custom claims
-	var claims struct {
-		Email    string `json:"email"`
-		Verified bool   `json:"email_verified"`
-		Picture  string `json:"picture"`
-		Name     string `json:"name"`
-		Locale   string `json:"locale"`
-	}
-	if err := idToken.Claims(&claims); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-		return
-	}
-	if !claims.Verified {
+	if !provider.TrustEmail && !u.EmailVerified {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("unverified email"))
 		return
 	}
-	sessionObj, err := state.CreateSession(&state.UserOptions{
-		Name:    claims.Name,
-		Picture: claims.Picture,
-		Email:   claims.Email,
-		Locale:  claims.Locale,
-	})
+
+	profile := make(map[string]any)
+
+	err = u.Claims(&profile)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	opts := &state.UserOptions{}
+	if v, ok := profile[provider.UserMeta.Name]; ok && v != nil {
+		opts.Name = v.(string)
+	}
+	if v, ok := profile[provider.UserMeta.Picture]; ok && v != nil {
+		opts.Picture = v.(string)
+	}
+	if v, ok := profile[provider.UserMeta.Email]; ok && v != nil {
+		opts.Email = v.(string)
+	}
+	if v, ok := profile[provider.UserMeta.Locale]; ok && v != nil {
+		opts.Locale = v.(string)
+	}
+	if v, ok := profile[provider.UserMeta.Bio]; ok && v != nil {
+		opts.Bio = v.(string)
+	}
+
+	sessionObj, err := state.CreateSession(opts)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+		fmt.Fprintf(w, "create session error: %s", err)
 		return
 	}
 	jump := string(base58.Decode(r.URL.Query().Get("state")))

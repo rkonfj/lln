@@ -8,6 +8,19 @@ oidc:
   scopes:
     - profile
     - email
+- provider: github
+  authURL: https://github.com/login/oauth/authorize
+  tokenURL: https://github.com/login/oauth/access_token
+  userInfoURL: https://api.github.com/user
+  clientID: ${OIDC_GITHUB_CLIENT_ID}
+  clientSecret: ${OIDC_GITHUB_CLIENT_SECRET}
+  redirect: ${OIDC_GITHUB_REDIRECT}
+  trustEmail: true
+  userMeta:
+    picture: avatar
+  scopes:
+    - read:user
+    - user:email
 state:
   etcd:
     endpoints:
@@ -18,4 +31,5 @@ state:
 model:
   status:
     contentListLimit: 20
-    contentLimit: 380
+    contentLimit: 4096
+    overviewLimit: 256

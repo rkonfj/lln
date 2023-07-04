@@ -159,6 +159,7 @@ type UserOptions struct {
 	Picture string
 	Email   string
 	Locale  string
+	Bio     string
 }
 
 func UserByEmail(email string) *User {
@@ -199,6 +200,7 @@ func NewUser(opts *UserOptions) *User {
 		Email:      opts.Email,
 		Picture:    opts.Picture,
 		Locale:     opts.Locale,
+		Bio:        opts.Bio,
 		CreateTime: time.Now(),
 	}
 
