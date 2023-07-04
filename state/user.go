@@ -29,14 +29,16 @@ type ModifiableUser struct {
 }
 
 type User struct {
-	ID         string    `json:"id"`
-	UniqueName string    `json:"uniqueName"`
-	Name       string    `json:"name"`
-	Picture    string    `json:"picture"`
-	Email      string    `json:"email"`
-	Locale     string    `json:"locale"`
-	CreateTime time.Time `json:"createTime"`
-	Bio        string    `json:"bio"`
+	ID           string    `json:"id"`
+	UniqueName   string    `json:"uniqueName"`
+	Name         string    `json:"name"`
+	Picture      string    `json:"picture"`
+	Email        string    `json:"email"`
+	Locale       string    `json:"locale"`
+	CreateTime   time.Time `json:"createTime"`
+	Bio          string    `json:"bio"`
+	VerifiedCode int64     `json:"verifiedCode"`
+	ModRev       int64     `json:"-"`
 }
 
 // Modify apply new user props
@@ -138,6 +140,22 @@ func (u *User) Tweets() int64 {
 	return resp.Count
 }
 
+func (u *User) SetVerified(code int64) error {
+	key := stateKey(fmt.Sprintf(tUser, u.ID))
+	u.VerifiedCode = code
+	b, _ := json.Marshal(u)
+	resp, err := etcdClient.Txn(context.Background()).
+		If(clientv3.Compare(clientv3.ModRevision(key), "=", u.ModRev)).
+		Then(clientv3.OpPut(key, string(b))).Commit()
+	if err != nil {
+		return err
+	}
+	if !resp.Succeeded {
+		return errors.New("try again later")
+	}
+	return nil
+}
+
 func Followed(u1, u2 string) bool {
 	resp, err := etcdClient.KV.Get(context.Background(), stateKey(fmt.Sprintf(tFollowUser, u2, u1)), clientv3.WithCountOnly())
 	if err != nil {
@@ -148,10 +166,11 @@ func Followed(u1, u2 string) bool {
 }
 
 type ActUser struct {
-	ID         string `json:"id"`
-	UniqueName string `json:"uniqueName"`
-	Name       string `json:"name"`
-	Picture    string `json:"picture"`
+	ID           string `json:"id"`
+	UniqueName   string `json:"uniqueName"`
+	Name         string `json:"name"`
+	Picture      string `json:"picture"`
+	VerifiedCode int64  `json:"verifiedCode"`
 }
 
 type UserOptions struct {
@@ -188,9 +207,10 @@ func castUser(resp *clientv3.GetResponse, err error) *User {
 	u := &User{}
 	err = json.Unmarshal(resp.Kvs[0].Value, u)
 	if err != nil {
-		logrus.Debug(err)
+		logrus.Errorf("cast user error: %s", err)
 		return nil
 	}
+	u.ModRev = resp.Kvs[0].ModRevision
 	return u
 }
 

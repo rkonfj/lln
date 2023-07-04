@@ -33,3 +33,5 @@ model:
     contentListLimit: 20
     contentLimit: 4096
     overviewLimit: 256
+admins:
+  - 2u4buCaWFhJg214tm

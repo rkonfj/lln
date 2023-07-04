@@ -35,10 +35,13 @@ func keepStatusUserConsistentLoop() {
 				if i == len(ss)-1 {
 					lastRev = s.CreateRev
 				}
-				if s.User.Name != e.Name || s.User.UniqueName != e.UniqueName {
+				if s.User.Name != e.Name ||
+					s.User.UniqueName != e.UniqueName ||
+					s.User.VerifiedCode != e.VerifiedCode {
 					key := stateKey(fmt.Sprintf("/status/%s", s.ID))
 					s.User.Name = e.Name
 					s.User.UniqueName = e.UniqueName
+					s.User.VerifiedCode = e.VerifiedCode
 					b, err := json.Marshal(s)
 					if err != nil {
 						logrus.Debug(err)

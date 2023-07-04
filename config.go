@@ -20,6 +20,7 @@ type Config struct {
 	OIDC   []*OIDC     `yaml:"oidc"`
 	State  StateConfig `yaml:"state"`
 	Model  ModelConfig `yaml:"model"`
+	Admins []string    `yaml:"admins"`
 }
 
 type OIDC struct {

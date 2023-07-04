@@ -3,6 +3,7 @@ package tools
 import (
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 // PaginationOptions options for pagination
@@ -24,6 +25,16 @@ func Unique(slice []string) []string {
 	}
 
 	return result
+}
+
+// Contains 函数用于判断一个字符串切片中是否存在某个字符串
+func Contains(strSlice []string, searchString string) bool {
+	for _, str := range strSlice {
+		if strings.Contains(str, searchString) {
+			return true
+		}
+	}
+	return false
 }
 
 func URLQueryInt64Default(r *http.Request, key string, defaultValue int64) (value int64, err error) {

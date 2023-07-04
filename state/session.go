@@ -12,21 +12,23 @@ import (
 )
 
 type Session struct {
-	ApiKey     string `json:"apiKey"`
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	UniqueName string `json:"uniqueName"`
-	Picture    string `json:"picture"`
-	Locale     string `json:"locale"`
-	Bio        string `json:"bio"`
+	ApiKey       string `json:"apiKey"`
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	UniqueName   string `json:"uniqueName"`
+	Picture      string `json:"picture"`
+	Locale       string `json:"locale"`
+	Bio          string `json:"bio"`
+	VerifiedCode int64  `json:"verifiedCode"`
 }
 
 func (s *Session) ToUser() *ActUser {
 	return &ActUser{
-		ID:         s.ID,
-		Name:       s.Name,
-		UniqueName: s.UniqueName,
-		Picture:    s.Picture,
+		ID:           s.ID,
+		Name:         s.Name,
+		UniqueName:   s.UniqueName,
+		Picture:      s.Picture,
+		VerifiedCode: s.VerifiedCode,
 	}
 }
 
@@ -167,12 +169,13 @@ func CreateSession(opts *UserOptions) (*Session, error) {
 		u = NewUser(opts)
 	}
 	s := &Session{
-		ID:         u.ID,
-		Name:       u.Name,
-		UniqueName: u.UniqueName,
-		Picture:    u.Picture,
-		Locale:     u.Locale,
-		Bio:        u.Bio,
+		ID:           u.ID,
+		Name:         u.Name,
+		UniqueName:   u.UniqueName,
+		Picture:      u.Picture,
+		Locale:       u.Locale,
+		Bio:          u.Bio,
+		VerifiedCode: u.VerifiedCode,
 	}
 	DefaultSessionManager.Create(s)
 	return s, nil

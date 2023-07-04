@@ -65,6 +65,11 @@ func startAction(cmd *cobra.Command, args []string) error {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 
+	r.Route("/v", func(r chi.Router) {
+		r.Use(common, admin)
+		r.Put(fmt.Sprintf("/user/{%s}/verified", tools.UID), userVerified)
+	})
+
 	r.Route("/i", func(r chi.Router) {
 		r.Use(common, security)
 		r.Post(fmt.Sprintf("/like/status/{%s}", tools.StatusID), likeStatus)
@@ -98,6 +103,23 @@ func startAction(cmd *cobra.Command, args []string) error {
 	})
 	logrus.Infof("listen %s for http now", config.Listen)
 	return http.ListenAndServe(config.Listen, r)
+}
+
+func admin(h http.Handler) http.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		apiKey := r.Header.Get("Authorization")
+		if len(apiKey) == 0 {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		ssion := state.DefaultSessionManager.Load(apiKey)
+		if ssion == nil || !tools.Contains(config.Admins, ssion.ID) {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+		h.ServeHTTP(w, r)
+	}
+	return http.HandlerFunc(fn)
 }
 
 func security(h http.Handler) http.Handler {
