@@ -75,7 +75,7 @@ func (c *StatusConfig) RestrictContentList(contentListSize int) error {
 
 func (c *StatusConfig) RestrictOverview(content string) error {
 	count := utf8.RuneCountInString(content)
-	if count > c.ContentLimit {
+	if count > c.OverviewLimit {
 		return fmt.Errorf("maximum %d unicode characters in status overview, %d",
 			c.OverviewLimit, count)
 	}

@@ -77,7 +77,7 @@ func authorize(w http.ResponseWriter, r *http.Request) {
 	jump := string(base58.Decode(r.URL.Query().Get("state")))
 	if r.Method == http.MethodPost {
 		w.Header().Add("X-Jump", jump)
-		json.NewEncoder(w).Encode(sessionObj)
+		json.NewEncoder(w).Encode(R{V: sessionObj})
 	} else {
 		http.Redirect(w, r, jump, http.StatusFound)
 	}
