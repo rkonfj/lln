@@ -13,6 +13,10 @@ var statusLikeKey func(statusID, uid string) string = func(statusID, uid string)
 	return stateKey(fmt.Sprintf("/like/status/%s/%s", statusID, uid))
 }
 
+var userLikeKey func(statusID, uid string) string = func(statusID, uid string) string {
+	return stateKey(fmt.Sprintf("/like/%s/status/%s", uid, statusID))
+}
+
 func Liked(statusID, uid string) bool {
 	key := statusLikeKey(statusID, uid)
 	resp, err := etcdClient.KV.Get(context.Background(), key, clientv3.WithCountOnly())
@@ -28,7 +32,9 @@ func likeCount(statusID string) int64 {
 }
 
 func LikeStatus(user *ActUser, statusID string) error {
-	statusLikeSetKey := statusLikeKey(statusID, user.ID)
+	statusLikeKey := statusLikeKey(statusID, user.ID)
+	userLikeKey := userLikeKey(statusID, user.ID)
+	statueKey := stateKey(fmt.Sprintf("/status/%s", statusID))
 	b, err := json.Marshal(user)
 	if err != nil {
 		return err
@@ -37,7 +43,10 @@ func LikeStatus(user *ActUser, statusID string) error {
 	if s == nil {
 		return ErrStatusNotFound
 	}
-	ops := []clientv3.Op{clientv3.OpPut(statusLikeSetKey, string(b))}
+	ops := []clientv3.Op{
+		clientv3.OpPut(statusLikeKey, string(b)),
+		clientv3.OpPut(userLikeKey, statueKey),
+	}
 	ops = append(ops, newMessageOps(MsgOptions{
 		from:     user,
 		toUID:    s.User.ID,
@@ -47,8 +56,8 @@ func LikeStatus(user *ActUser, statusID string) error {
 	})...)
 
 	_, err = etcdClient.Txn(context.Background()).
-		If(clientv3.Compare(clientv3.Version(statusLikeSetKey), ">", 0)).
-		Then(clientv3.OpDelete(statusLikeSetKey)).
+		If(clientv3.Compare(clientv3.Version(statusLikeKey), ">", 0)).
+		Then(clientv3.OpDelete(statusLikeKey), clientv3.OpDelete(userLikeKey)).
 		Else(ops...).
 		Commit()
 	return err
