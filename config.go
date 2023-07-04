@@ -63,7 +63,8 @@ type EtcdConfig struct {
 }
 
 type ModelConfig struct {
-	Status StatusConfig `yaml:"status"`
+	Status   StatusConfig `yaml:"status"`
+	Keywords []string     `yaml:"keywords"`
 }
 
 type StatusConfig struct {
@@ -131,6 +132,21 @@ func loadConfig(configPath string) error {
 	if config.Model.Status.ContentListLimit == 0 {
 		config.Model.Status.ContentListLimit = 20
 	}
+
+	config.Model.Keywords =
+		append(config.Model.Keywords,
+			"explore",
+			"messages",
+			"bookmarks",
+			"settings",
+			"status",
+			"search",
+			"labels",
+			"tags",
+			"news",
+			"probe",
+			"verified",
+		)
 
 	initOpenIDConnect()
 

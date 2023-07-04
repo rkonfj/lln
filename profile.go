@@ -99,6 +99,11 @@ func modifyProfile(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "unique name: not match `%s`", uniqueNameRegex)
 			return
 		}
+		if tools.Contains(config.Model.Keywords, mu.UniqueName) {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, "unique name: %s is a keyword", mu.UniqueName)
+			return
+		}
 	}
 
 	if len(mu.Name) > 0 && utf8.RuneCountInString(mu.Name) > 20 {
