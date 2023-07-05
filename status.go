@@ -22,6 +22,7 @@ type Status struct {
 	ID         string                  `json:"id"`
 	Content    []*state.StatusFragment `json:"content"`
 	RefStatus  *Status                 `json:"prev"`
+	Next       *Status                 `json:"next"`
 	User       *state.ActUser          `json:"user"`
 	CreateRev  int64                   `json:"createRev"`
 	CreateTime time.Time               `json:"createTime"`
@@ -233,7 +234,22 @@ func newStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func deleteStatus(w http.ResponseWriter, r *http.Request) {
-	err := state.DeleteStatus(r.Context().Value(tools.KeySessionUID).(string), chi.URLParam(r, tools.StatusID))
+	s := state.GetStatus(chi.URLParam(r, tools.StatusID))
+	if s == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	for _, f := range s.ContentsByType("text") {
+		matches := labelsRegex.FindAllStringSubmatch(f.Value, -1)
+		if len(matches) > 0 {
+			w.WriteHeader(http.StatusForbidden)
+			fmt.Fprint(w, state.ErrStatusQuotes)
+			return
+		}
+	}
+
+	err := s.Delete(r.Context().Value(tools.KeySessionUID).(string))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))

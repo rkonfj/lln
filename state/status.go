@@ -14,6 +14,10 @@ import (
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
+var (
+	ErrStatusQuotes error = errors.New("there are quotes")
+)
+
 type StatusOptions struct {
 	Content   []*StatusFragment
 	RefStatus string
@@ -47,6 +51,65 @@ func (s *Status) Overview() string {
 		}
 	}
 	return ""
+}
+
+func (s *Status) ContentsByType(t string) (sfs []*StatusFragment) {
+	for _, sf := range s.Content {
+		if sf.Type == t {
+			sfs = append(sfs, sf)
+		}
+	}
+	return
+}
+
+func (s *Status) Delete(uid string) error {
+	if s.User.ID != uid {
+		return ErrStatusNotFound
+	}
+	statusProbeKey := stateKey(fmt.Sprintf("/probe/status/%s", s.ID))
+	resp, err := etcdClient.KV.Get(context.Background(), statusProbeKey)
+	if err != nil {
+		return err
+	}
+	cmps := []clientv3.Cmp{}
+	if resp.Count > 0 {
+		// disable delete when comments count greater than 0
+		if string(resp.Kvs[0].Value) != s.ID {
+			statusCommentsKey := stateKey(fmt.Sprintf("/comments/status/%s", s.ID))
+			r, err := etcdClient.Get(context.Background(), statusCommentsKey,
+				clientv3.WithCountOnly(), clientv3.WithPrefix())
+			if err != nil || r.Count != 0 {
+				logrus.Error("", err)
+				return errors.New("there are quotes")
+			}
+		}
+		// there are no new comments when executing txn
+		cmps = append(cmps, clientv3.Compare(
+			clientv3.ModRevision(statusProbeKey), "=", resp.Kvs[0].ModRevision))
+	}
+
+	statusCommentsKey := stateKey(fmt.Sprintf("/comments/status/%s/%s", s.RefStatus, s.ID))
+	statusRecycleKey := stateKey(fmt.Sprintf("/recycle/status/%s", s.ID))
+	statusKey := stateKey(fmt.Sprintf("/status/%s", s.ID))
+	userStatusKey := stateKey(fmt.Sprintf("/%s/status/%s", uid, s.ID))
+
+	b, _ := json.Marshal(s)
+
+	txnResp, err := etcdClient.Txn(context.Background()).If(cmps...).
+		Then(clientv3.OpDelete(statusKey),
+			clientv3.OpDelete(userStatusKey),
+			clientv3.OpDelete(statusProbeKey),
+			clientv3.OpDelete(statusCommentsKey),
+			clientv3.OpPut(statusRecycleKey, string(b))).Commit()
+	if err != nil {
+		return err
+	}
+
+	if !txnResp.Succeeded {
+		// disable delete when comments count greater than 0
+		return ErrStatusQuotes
+	}
+	return nil
 }
 
 func NewStatus(opts *StatusOptions) (*Status, error) {
@@ -121,52 +184,17 @@ func NewStatus(opts *StatusOptions) (*Status, error) {
 	return s, nil
 }
 
-func DeleteStatus(uid, statusID string) error {
-	statusProbeKey := stateKey(fmt.Sprintf("/probe/status/%s", statusID))
-	resp, err := etcdClient.KV.Get(context.Background(), statusProbeKey)
-	if err != nil {
-		return err
-	}
-	cmps := []clientv3.Cmp{}
-	if resp.Count > 0 {
-		// disable delete when comments count greater than 0
-		if string(resp.Kvs[0].Value) != statusID {
-			statusCommentsKey := stateKey(fmt.Sprintf("/comments/status/%s", statusID))
-			r, err := etcdClient.Get(context.Background(), statusCommentsKey,
-				clientv3.WithCountOnly(), clientv3.WithPrefix())
-			if err != nil || r.Count != 0 {
-				logrus.Error("", err)
-				return errors.New("there are quotes")
-			}
-		}
-		// there are no new comments when executing txn
-		cmps = append(cmps, clientv3.Compare(
-			clientv3.ModRevision(statusProbeKey), "=", resp.Kvs[0].ModRevision))
-	}
-
-	s := GetStatus(statusID)
-	statusCommentsKey := stateKey(fmt.Sprintf("/comments/status/%s/%s", s.RefStatus, statusID))
-	statusRecycleKey := stateKey(fmt.Sprintf("/recycle/status/%s", statusID))
+func RecommandStatus(statusID string) error {
+	key := stateKey(fmt.Sprintf("/recommended/status/%s", statusID))
 	statusKey := stateKey(fmt.Sprintf("/status/%s", statusID))
-	userStatusKey := stateKey(fmt.Sprintf("/%s/status/%s", uid, statusID))
+	_, err := etcdClient.KV.Put(context.Background(), key, statusKey)
+	return err
+}
 
-	b, _ := json.Marshal(s)
-
-	txnResp, err := etcdClient.Txn(context.Background()).If(cmps...).
-		Then(clientv3.OpDelete(statusKey),
-			clientv3.OpDelete(userStatusKey),
-			clientv3.OpDelete(statusProbeKey),
-			clientv3.OpDelete(statusCommentsKey),
-			clientv3.OpPut(statusRecycleKey, string(b))).Commit()
-	if err != nil {
-		return err
-	}
-
-	if !txnResp.Succeeded {
-		// disable delete when comments count greater than 0
-		return errors.New("there are quotes")
-	}
-	return nil
+func NotRecommandStatus(statusID string) error {
+	key := stateKey(fmt.Sprintf("/recommended/status/%s", statusID))
+	_, err := etcdClient.KV.Delete(context.Background(), key)
+	return err
 }
 
 func getStatusBin(statusID string) (s []byte, createRev int64) {

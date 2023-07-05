@@ -68,6 +68,8 @@ func startAction(cmd *cobra.Command, args []string) error {
 	r.Route("/v", func(r chi.Router) {
 		r.Use(common, admin)
 		r.Put(fmt.Sprintf("/user/{%s}/verified", tools.UID), userVerified)
+		r.Post(fmt.Sprintf("/status/{%s}/recommand", tools.StatusID), recommandStatus)
+		r.Delete(fmt.Sprintf("/status/{%s}/recommand", tools.StatusID), notRecommandStatus)
 	})
 
 	r.Route("/i", func(r chi.Router) {

@@ -17,7 +17,7 @@ oidc:
   redirect: ${OIDC_GITHUB_REDIRECT}
   trustEmail: true
   userMeta:
-    picture: avatar
+    picture: avatar_url
   scopes:
     - read:user
     - user:email

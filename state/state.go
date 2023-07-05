@@ -2,6 +2,7 @@ package state
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -11,7 +12,10 @@ import (
 	"go.etcd.io/etcd/pkg/transport"
 )
 
-var etcdClient *clientv3.Client
+var (
+	etcdClient       *clientv3.Client
+	errTryAgainLater error = errors.New("txn failed. try again later")
+)
 
 type EtcdOptions struct {
 	Endpoints     []string

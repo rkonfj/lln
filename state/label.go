@@ -13,9 +13,10 @@ type Label struct {
 	Count int64  `json:"count"`
 }
 
-func GetLabels(prefix string) (labels []*Label) {
+func GetLabels(prefix string, size int64) (labels []*Label) {
 	resp, err := etcdClient.KV.Get(context.Background(), stateKey(fmt.Sprintf("/label/%s", prefix)),
 		clientv3.WithSort(clientv3.SortByVersion, clientv3.SortDescend),
+		clientv3.WithLimit(size),
 		clientv3.WithPrefix())
 	if err != nil {
 		logrus.Debug(err)

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/rkonfj/lln/tools"
 	"github.com/sirupsen/logrus"
@@ -186,6 +187,12 @@ func keepRecommendedStatusLoop() {
 }
 
 func recommend(s *Status, del bool) error {
+	// 评论推荐
+	if len(s.RefStatus) > 0 {
+		return recommandComment(s, del)
+	}
+
+	// 用户头像为空不推荐
 	if len(s.User.Picture) == 0 {
 		return nil
 	}
@@ -196,15 +203,6 @@ func recommend(s *Status, del bool) error {
 		if err != nil {
 			logrus.Error(err)
 		}
-
-		if len(s.RefStatus) > 0 {
-			statusKey := stateKey(fmt.Sprintf("/status/%s", s.RefStatus))
-			putKey := stateKey(fmt.Sprintf("/recommended/status/%s", s.RefStatus))
-			_, err = etcdClient.KV.Put(context.Background(), putKey, statusKey)
-			if err != nil {
-				logrus.Error(err)
-			}
-		}
 		return nil
 	}
 
@@ -212,15 +210,25 @@ func recommend(s *Status, del bool) error {
 	putKey := stateKey(fmt.Sprintf("/recommended/status/%s", s.ID))
 	ops := []clientv3.Op{clientv3.OpPut(putKey, statusKey),
 		clientv3.OpPut(lastStatusCreateRev, fmt.Sprintf("%d", s.CreateRev))}
-	if len(s.RefStatus) > 0 {
-		delKey := stateKey(fmt.Sprintf("/recommended/status/%s", s.RefStatus))
-		_, err := etcdClient.Txn(context.Background()).
-			If(clientv3.Compare(clientv3.Version(delKey), "=", 0)).
-			Then(ops...).
-			Else(append(ops, clientv3.OpDelete(delKey))...).Commit()
-		return err
-	}
 	_, err := etcdClient.Txn(context.Background()).
 		Then(ops...).Commit()
 	return err
+}
+
+func recommandComment(s *Status, del bool) error {
+	meta, err := NewCommentsRecommandMetaForRecommand(s.RefStatus)
+	if err != nil {
+		return fmt.Errorf("[recommended-algo] %s comments meta error: %s", s.RefStatus, err)
+	}
+
+	for i := 0; i < 10; i++ {
+		err = meta.RunRecommand(s.CreateRev)
+		if err != nil {
+			logrus.Warnf("[recommended-algo] retry %s comments recommand: %s", s.RefStatus, err)
+			time.Sleep(time.Second)
+			continue
+		}
+		return nil
+	}
+	return fmt.Errorf("[recommended-algo] comments recommand error: 30 times retry, finally failed")
 }

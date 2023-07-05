@@ -8,6 +8,7 @@ import (
 
 	"github.com/rkonfj/lln/state"
 	"github.com/rkonfj/lln/tools"
+	"github.com/sirupsen/logrus"
 )
 
 func explore(w http.ResponseWriter, r *http.Request) {
@@ -28,10 +29,15 @@ func explore(w http.ResponseWriter, r *http.Request) {
 	var ret []*Status
 	for _, s := range ss {
 		status := castStatus(s, sessionUID)
-		if len(s.RefStatus) > 0 {
-			prev := state.GetStatus(s.RefStatus)
-			if prev != nil {
-				status.RefStatus = castStatus(prev, sessionUID)
+		if s.Comments > 0 {
+			meta, err := state.NewCommentsRecommandMeta(s.ID)
+			if err != nil {
+				logrus.Errorf("create comments recommand meta error: %s", err)
+				continue
+			}
+			next := meta.Recommand()
+			if next != nil {
+				status.Next = castStatus(next, sessionUID)
 			}
 		}
 		ret = append(ret, status)
