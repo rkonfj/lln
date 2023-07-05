@@ -109,5 +109,5 @@ func (m *CommentsRecommandMeta) RunRecommand(statusCreateRev int64) error {
 }
 
 func calcScore(c *Status) float64 {
-	return float64(c.User.VerifiedCode*2) + float64(c.Comments)*1.5 + float64(c.LikeCount)*1.2 + float64(c.Bookmarks)*1
+	return float64((c.User.VerifiedCode+9)/10*2) + float64(c.Comments)*1.5 + float64(c.LikeCount)*1.2 + float64(c.Bookmarks)*1
 }
