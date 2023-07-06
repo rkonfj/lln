@@ -103,7 +103,7 @@ func (m *CommentsRecommandMeta) RunRecommand(statusCreateRev int64) error {
 		return nil
 	}
 	if !resp.Succeeded {
-		return errTryAgainLater
+		return ErrTryAgainLater
 	}
 	return nil
 }

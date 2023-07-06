@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/rkonfj/lln/config"
 	"github.com/rkonfj/lln/state"
 	"github.com/rkonfj/lln/tools"
 )
@@ -142,14 +143,14 @@ func newStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := config.Model.Status.RestrictContentList(len(req.Content)); err != nil {
+	if err := config.Conf.Model.Status.RestrictContentList(len(req.Content)); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, err.Error())
 		return
 	}
 
 	for _, f := range req.Content {
-		if err := config.Model.Status.RestrictContent(f.Value); err != nil {
+		if err := config.Conf.Model.Status.RestrictContent(f.Value); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			fmt.Fprint(w, err.Error())
 			return
@@ -169,7 +170,7 @@ func newStatus(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		if !overviewRestricted {
-			if err := config.Model.Status.RestrictOverview(f.Value); err != nil {
+			if err := config.Conf.Model.Status.RestrictOverview(f.Value); err != nil {
 				w.WriteHeader(http.StatusBadRequest)
 				fmt.Fprint(w, err.Error())
 				return

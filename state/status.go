@@ -14,10 +14,6 @@ import (
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
-var (
-	ErrStatusQuotes error = errors.New("there are quotes")
-)
-
 type StatusOptions struct {
 	Content   []*StatusFragment
 	RefStatus string

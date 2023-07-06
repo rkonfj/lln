@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/rkonfj/lln/config"
 	"github.com/rkonfj/lln/state"
 	"github.com/rkonfj/lln/tools"
 	"github.com/sirupsen/logrus"
@@ -46,16 +47,16 @@ func initAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	err = loadConfig(configPath)
+	err = config.LoadConfig(configPath)
 	if err != nil {
 		return err
 	}
 
 	err = state.InitState(state.EtcdOptions{
-		Endpoints:     config.State.Etcd.Endpoints,
-		CertFile:      config.State.Etcd.CertFile,
-		KeyFile:       config.State.Etcd.KeyFile,
-		TrustedCAFile: config.State.Etcd.TrustedCAFile,
+		Endpoints:     config.Conf.State.Etcd.Endpoints,
+		CertFile:      config.Conf.State.Etcd.CertFile,
+		KeyFile:       config.Conf.State.Etcd.KeyFile,
+		TrustedCAFile: config.Conf.State.Etcd.TrustedCAFile,
 	})
 	return err
 }
@@ -82,7 +83,7 @@ func startAction(cmd *cobra.Command, args []string) error {
 		r.Get("/bookmarks", listBookmarks)
 		r.Get("/messages", listMessages)
 		r.Get("/messages/tips", getNewTipMessages)
-		r.Get("/restriction", getRestriction)
+		r.Get("/restriction", config.GetRestriction)
 		r.Delete("/messages", deleteMessages)
 		r.Delete("/messages/tips", deleteTipMessages)
 		r.Delete("/authorize", deleteAuthorize)
@@ -103,8 +104,8 @@ func startAction(cmd *cobra.Command, args []string) error {
 		r.Get("/explore/news-probe", exploreNewsProbe)
 		r.Get("/labels", labels)
 	})
-	logrus.Infof("listen %s for http now", config.Listen)
-	return http.ListenAndServe(config.Listen, r)
+	logrus.Infof("listen %s for http now", config.Conf.Listen)
+	return http.ListenAndServe(config.Conf.Listen, r)
 }
 
 func admin(h http.Handler) http.Handler {
@@ -115,7 +116,7 @@ func admin(h http.Handler) http.Handler {
 			return
 		}
 		ssion := state.DefaultSessionManager.Load(apiKey)
-		if ssion == nil || !tools.Contains(config.Admins, ssion.ID) {
+		if ssion == nil || !tools.Contains(config.Conf.Admins, ssion.ID) {
 			w.WriteHeader(http.StatusForbidden)
 			return
 		}

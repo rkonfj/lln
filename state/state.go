@@ -2,7 +2,6 @@ package state
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -13,8 +12,7 @@ import (
 )
 
 var (
-	etcdClient       *clientv3.Client
-	errTryAgainLater error = errors.New("txn failed. try again later")
+	etcdClient *clientv3.Client
 )
 
 type EtcdOptions struct {

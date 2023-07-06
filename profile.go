@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/rkonfj/lln/config"
 	"github.com/rkonfj/lln/state"
 	"github.com/rkonfj/lln/tools"
 )
@@ -99,7 +100,7 @@ func modifyProfile(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "unique name: not match `%s`", uniqueNameRegex)
 			return
 		}
-		if tools.Contains(config.Model.Keywords, mu.UniqueName) {
+		if tools.Contains(config.Conf.Model.Keywords, mu.UniqueName) {
 			w.WriteHeader(http.StatusBadRequest)
 			fmt.Fprintf(w, "unique name: %s is a keyword", mu.UniqueName)
 			return

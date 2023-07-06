@@ -8,6 +8,7 @@ import (
 
 	"github.com/decred/base58"
 	"github.com/go-chi/chi/v5"
+	"github.com/rkonfj/lln/config"
 	"github.com/rkonfj/lln/state"
 	"github.com/rkonfj/lln/tools"
 	"github.com/sirupsen/logrus"
@@ -15,7 +16,7 @@ import (
 
 func authorize(w http.ResponseWriter, r *http.Request) {
 	providerName := chi.URLParam(r, tools.Provider)
-	provider := getProvider(providerName)
+	provider := config.GetOIDCProvider(providerName)
 	if provider == nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(fmt.Sprintf("provider %s not supported", providerName)))
@@ -101,7 +102,7 @@ func deleteAuthorize(w http.ResponseWriter, r *http.Request) {
 
 func oidcRedirect(w http.ResponseWriter, r *http.Request) {
 	providerName := chi.URLParam(r, tools.Provider)
-	provider := getProvider(providerName)
+	provider := config.GetOIDCProvider(providerName)
 	if provider == nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(fmt.Sprintf("provider %s not supported", providerName)))
