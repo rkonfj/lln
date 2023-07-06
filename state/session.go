@@ -7,6 +7,8 @@ import (
 	"sync"
 
 	"github.com/decred/base58"
+	"github.com/rkonfj/lln/config"
+	"github.com/rkonfj/lln/tools"
 	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 )
@@ -20,6 +22,7 @@ type Session struct {
 	Locale       string `json:"locale"`
 	Bio          string `json:"bio"`
 	VerifiedCode int64  `json:"verifiedCode"`
+	Admin        bool   `json:"admin"`
 }
 
 func (s *Session) ToUser() *ActUser {
@@ -176,6 +179,7 @@ func CreateSession(opts *UserOptions) (*Session, error) {
 		Locale:       u.Locale,
 		Bio:          u.Bio,
 		VerifiedCode: u.VerifiedCode,
+		Admin:        tools.Contains(config.Conf.Admins, u.ID),
 	}
 	DefaultSessionManager.Create(s)
 	return s, nil
