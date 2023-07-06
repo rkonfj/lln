@@ -11,8 +11,7 @@ import (
 )
 
 func bookmarkStatus(w http.ResponseWriter, r *http.Request) {
-	ssion := r.Context().Value(tools.KeySession).(*state.Session)
-	err := state.BookmarkStatus(ssion.ToUser(), chi.URLParam(r, tools.StatusID))
+	err := state.BookmarkStatus(currentSessionUser(r), chi.URLParam(r, tools.StatusID))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
@@ -20,7 +19,6 @@ func bookmarkStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func listBookmarks(w http.ResponseWriter, r *http.Request) {
-	ssion := r.Context().Value(tools.KeySession).(*state.Session)
 	opts, err := tools.URLPaginationOptions(r)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -28,15 +26,15 @@ func listBookmarks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ss, more := state.ListBookmarks(ssion.ToUser(), opts)
-	sessionUID := r.Context().Value(tools.KeySessionUID).(string)
+	user := currentSessionUser(r)
+	ss, more := state.ListBookmarks(user, opts)
 	var ret []*Status
 	for _, s := range ss {
-		status := castStatus(s, sessionUID)
+		status := castStatus(s, user)
 		if len(s.RefStatus) > 0 {
 			prev := state.GetStatus(s.RefStatus)
 			if prev != nil {
-				status.RefStatus = castStatus(prev, sessionUID)
+				status.RefStatus = castStatus(prev, user)
 			}
 		}
 		ret = append(ret, status)

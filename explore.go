@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/rkonfj/lln/state"
 	"github.com/rkonfj/lln/tools"
@@ -19,16 +18,11 @@ func explore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var user *state.ActUser
-	if r.Context().Value(tools.KeySession) != nil {
-		user = r.Context().Value(tools.KeySession).(*state.Session).ToUser()
-	}
-
-	sessionUID := r.Context().Value(tools.KeySessionUID).(string)
+	user := currentSessionUser(r)
 	ss, more := state.Recommendations(user, opts)
 	var ret []*Status
 	for _, s := range ss {
-		status := castStatus(s, sessionUID)
+		status := castStatus(s, user)
 		if s.Comments > 0 {
 			meta, err := state.NewCommentsRecommandMeta(s.ID)
 			if err != nil {
@@ -37,7 +31,7 @@ func explore(w http.ResponseWriter, r *http.Request) {
 			}
 			next := meta.Recommand()
 			if next != nil {
-				status.Next = castStatus(next, sessionUID)
+				status.Next = castStatus(next, user)
 			}
 		}
 		ret = append(ret, status)
@@ -46,15 +40,12 @@ func explore(w http.ResponseWriter, r *http.Request) {
 }
 
 func exploreNewsProbe(w http.ResponseWriter, r *http.Request) {
-	after, err := strconv.ParseInt(r.URL.Query().Get("after"), 10, 64)
+	after, err := tools.URLQueryInt64(r, "after")
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, err.Error())
 		return
 	}
-	var user *state.ActUser
-	if r.Context().Value(tools.KeySession) != nil {
-		user = r.Context().Value(tools.KeySession).(*state.Session).ToUser()
-	}
+	user := currentSessionUser(r)
 	json.NewEncoder(w).Encode(R{V: state.RecommendCount(user, after)})
 }

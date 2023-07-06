@@ -102,8 +102,11 @@ func (u *User) ListStatus(opts *tools.PaginationOptions) (ss []*Status, more boo
 }
 
 // FollowingBy determine if {uid} is following me
-func (u *User) FollowingBy(uid string) bool {
-	return Followed(uid, u.ID)
+func (u *User) FollowingBy(user *ActUser) bool {
+	if user == nil {
+		return false
+	}
+	return Followed(user.ID, u.ID)
 }
 
 // Followers follower count

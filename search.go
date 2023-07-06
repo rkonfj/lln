@@ -27,14 +27,14 @@ func search(w http.ResponseWriter, r *http.Request) {
 		ss = state.ListStatusByKeyword(value, opts)
 	}
 
-	sessionUID := r.Context().Value(tools.KeySessionUID).(string)
+	user := currentSessionUser(r)
 	var ret []*Status
 	for _, s := range ss {
-		status := castStatus(s, sessionUID)
+		status := castStatus(s, user)
 		if len(s.RefStatus) > 0 {
 			prev := state.GetStatus(s.RefStatus)
 			if prev != nil {
-				status.RefStatus = castStatus(prev, sessionUID)
+				status.RefStatus = castStatus(prev, user)
 			}
 		}
 		ret = append(ret, status)

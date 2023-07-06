@@ -43,7 +43,7 @@ var atRegex = regexp.MustCompile(`@([\p{L}\d_]+)`)
 
 // status thread model
 func status(w http.ResponseWriter, r *http.Request) {
-	status := chainStatus(chi.URLParam(r, tools.StatusID), r.Context().Value(tools.KeySessionUID).(string))
+	status := chainStatus(chi.URLParam(r, tools.StatusID), currentSessionUser(r))
 	if status == nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -61,22 +61,22 @@ func statusComments(w http.ResponseWriter, r *http.Request) {
 	}
 
 	comments, more := state.StatusComments(chi.URLParam(r, tools.StatusID), opts)
-	sessionUID := r.Context().Value(tools.KeySessionUID).(string)
+	user := currentSessionUser(r)
 	var ss []*Status
 	for _, s := range comments {
-		ss = append(ss, castStatus(s, sessionUID))
+		ss = append(ss, castStatus(s, user))
 	}
 	json.NewEncoder(w).Encode(L{V: ss, More: more})
 }
 
-func chainStatus(statusID, sessionUID string) *Status {
+func chainStatus(statusID string, sessionUser *state.ActUser) *Status {
 	status := state.GetStatus(statusID)
 	if status == nil {
 		return nil
 	}
-	s := castStatus(status, sessionUID)
+	s := castStatus(status, sessionUser)
 	if len(status.RefStatus) > 0 {
-		s.RefStatus = chainStatus(status.RefStatus, sessionUID)
+		s.RefStatus = chainStatus(status.RefStatus, sessionUser)
 	}
 	return s
 }
@@ -103,14 +103,14 @@ func userStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ss, more := u.ListStatus(opts)
-	sessionUID := r.Context().Value(tools.KeySessionUID).(string)
+	user := currentSessionUser(r)
 	var ret []*Status
 	for _, s := range ss {
-		status := castStatus(s, sessionUID)
+		status := castStatus(s, user)
 		if len(s.RefStatus) > 0 {
 			prev := state.GetStatus(s.RefStatus)
 			if prev != nil {
-				status.RefStatus = castStatus(prev, sessionUID)
+				status.RefStatus = castStatus(prev, user)
 			}
 		}
 		ret = append(ret, status)
@@ -255,28 +255,5 @@ func deleteStatus(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 		return
-	}
-}
-
-func castStatus(s *state.Status, sessionUID string) *Status {
-	var liked, bookmarked, followed bool
-	if len(sessionUID) > 0 {
-		liked = state.Liked(s.ID, sessionUID)
-		bookmarked = state.Bookmarked(s.ID, sessionUID)
-		followed = state.Followed(sessionUID, s.User.ID)
-	}
-	return &Status{
-		ID:         s.ID,
-		Content:    s.Content,
-		User:       s.User,
-		CreateRev:  s.CreateRev,
-		CreateTime: s.CreateTime,
-		Comments:   s.Comments,
-		Views:      s.Views,
-		LikeCount:  s.LikeCount,
-		Bookmarks:  s.Bookmarks,
-		Liked:      liked,
-		Bookmarked: bookmarked,
-		Followed:   followed,
 	}
 }
