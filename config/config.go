@@ -19,6 +19,7 @@ type Config struct {
 	State  StateConfig `yaml:"state"`
 	Model  ModelConfig `yaml:"model"`
 	Admins []string    `yaml:"admins"`
+	S3     S3Config    `yaml:"s3"`
 }
 
 type StateConfig struct {

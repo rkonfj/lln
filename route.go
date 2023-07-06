@@ -29,6 +29,7 @@ func routeMustLogin(r *chi.Mux) {
 		r.Get("/messages", listMessages)
 		r.Get("/messages/tips", getNewTipMessages)
 		r.Get("/restriction", config.GetRestriction)
+		r.Get("/signed-upload-url", signRequest)
 		r.Delete("/messages", deleteMessages)
 		r.Delete("/messages/tips", deleteTipMessages)
 		r.Delete("/authorize", deleteAuthorize)
