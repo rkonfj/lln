@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/rkonfj/lln/tools"
@@ -14,12 +15,29 @@ import (
 )
 
 var (
-	UserChanged         chan *User = make(chan *User, 128)
-	lastStatusCreateRev string     = stateKey("/recommended/lastrev")
+	UserChanged chan *User             = make(chan *User, 128)
+	SVCM        StatusViewCountManager = StatusViewCountManager{
+		ctx: make(map[string]int),
+	}
+	lastStatusCreateRev string = stateKey("/recommended/lastrev")
 )
+
+type StatusViewCountManager struct {
+	ctx          map[string]int
+	pendingCount int
+	l            sync.RWMutex
+}
+
+func (m *StatusViewCountManager) Viewed(statusID string) {
+	m.l.Lock()
+	defer m.l.Unlock()
+	m.ctx[statusID] = m.ctx[statusID] + 1
+	m.pendingCount++
+}
 
 func startKeepConsistency() {
 	go keepStatusUserConsistentLoop()
+	go keepStatusViewCountConsistentLoop()
 	go keepSessionConsistentLoop()
 	go keepRecommendedStatusLoop()
 }
@@ -58,6 +76,28 @@ func keepStatusUserConsistentLoop() {
 				break
 			}
 		}
+	}
+}
+
+func keepStatusViewCountConsistentLoop() {
+	for {
+		time.Sleep(10 * time.Second)
+		SVCM.l.Lock()
+		if SVCM.pendingCount > 0 {
+			for k, v := range SVCM.ctx {
+				for i := 0; i < 10; i++ {
+					err := updateViewCount(k, v)
+					if err == nil {
+						break
+					}
+					logrus.Warn("update views count error: ", err)
+					time.Sleep(100 * time.Millisecond)
+				}
+				delete(SVCM.ctx, k)
+			}
+			SVCM.pendingCount = 0
+		}
+		SVCM.l.Unlock()
 	}
 }
 

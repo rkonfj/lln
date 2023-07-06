@@ -3,6 +3,7 @@ package state
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/rkonfj/lln/tools"
 	"github.com/sirupsen/logrus"
@@ -26,7 +27,16 @@ func commentsCount(statusID string) int64 {
 }
 
 func viewCount(statusID string) int64 {
-	return countKeys(stateKey(fmt.Sprintf("/view/status/%s/", statusID)))
+	resp, err := etcdClient.KV.Get(context.Background(), stateKey(fmt.Sprintf("/views/status/%s", statusID)))
+	if err != nil {
+		logrus.Errorf("status %s view count etcd error: %s", statusID, err)
+		return 0
+	}
+	if resp.Count == 0 {
+		return 0
+	}
+	c, _ := strconv.ParseInt(string(resp.Kvs[0].Value), 10, 64)
+	return c
 }
 
 func countKeys(key string) int64 {

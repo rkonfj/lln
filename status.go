@@ -43,11 +43,13 @@ var atRegex = regexp.MustCompile(`@([\p{L}\d_]+)`)
 
 // status thread model
 func status(w http.ResponseWriter, r *http.Request) {
-	status := chainStatus(chi.URLParam(r, tools.StatusID), currentSessionUser(r))
+	statusID := chi.URLParam(r, tools.StatusID)
+	status := chainStatus(statusID, currentSessionUser(r))
 	if status == nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
+	state.SVCM.Viewed(statusID)
 	json.NewEncoder(w).Encode(status)
 }
 
