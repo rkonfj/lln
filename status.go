@@ -12,6 +12,7 @@ import (
 	"github.com/rkonfj/lln/config"
 	"github.com/rkonfj/lln/state"
 	"github.com/rkonfj/lln/tools"
+	"github.com/sirupsen/logrus"
 )
 
 type StatusOptions struct {
@@ -65,8 +66,18 @@ func statusComments(w http.ResponseWriter, r *http.Request) {
 	comments, more := state.StatusComments(chi.URLParam(r, tools.StatusID), opts)
 	user := currentSessionUser(r)
 	var ss []*Status
-	for _, s := range comments {
-		ss = append(ss, castStatus(s, user))
+	for _, c := range comments {
+		s := castStatus(c, user)
+		ss = append(ss, s)
+		meta, err := state.NewCommentsRecommandMeta(s.ID)
+		if err != nil {
+			logrus.Error(err)
+			continue
+		}
+		rc := meta.Recommand()
+		if rc != nil {
+			s.Next = castStatus(rc, user)
+		}
 	}
 	json.NewEncoder(w).Encode(L{V: ss, More: more})
 }
