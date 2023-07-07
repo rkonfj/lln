@@ -7,6 +7,7 @@ import (
 
 type ModelConfig struct {
 	Status   StatusConfig `yaml:"status"`
+	Media    MediaConfig  `yaml:"media"`
 	Keywords []string     `yaml:"keywords"`
 }
 
@@ -42,6 +43,10 @@ func (c *StatusConfig) RestrictOverview(content string) error {
 	return nil
 }
 
+type MediaConfig struct {
+	CountPerDayLimit int64 `yaml:"countPerDayLimit"`
+}
+
 func initModel() {
 	if Conf.Model.Status.OverviewLimit == 0 {
 		Conf.Model.Status.OverviewLimit = 256
@@ -53,6 +58,10 @@ func initModel() {
 
 	if Conf.Model.Status.ContentListLimit == 0 {
 		Conf.Model.Status.ContentListLimit = 20
+	}
+
+	if Conf.Model.Media.CountPerDayLimit == 0 {
+		Conf.Model.Media.CountPerDayLimit = 20
 	}
 
 	Conf.Model.Keywords =
