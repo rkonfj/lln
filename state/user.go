@@ -24,6 +24,7 @@ type ModifiableUser struct {
 	UniqueName string `json:"uniqueName"`
 	Name       string `json:"name"`
 	Picture    string `json:"picture"`
+	Bg         string `json:"bg"`
 	Locale     string `json:"locale"`
 	Bio        string `json:"bio"`
 }
@@ -33,6 +34,7 @@ type User struct {
 	UniqueName   string    `json:"uniqueName"`
 	Name         string    `json:"name"`
 	Picture      string    `json:"picture"`
+	Bg           string    `json:"bg"`
 	Email        string    `json:"email"`
 	Locale       string    `json:"locale"`
 	CreateTime   time.Time `json:"createTime"`
@@ -47,13 +49,9 @@ func (u *User) Modify(mu ModifiableUser) error {
 		mu.UniqueName = ""
 	}
 	key := stateKey(fmt.Sprintf(tUser, u.ID))
-	resp, err := etcdClient.KV.Get(context.Background(), key)
-	if err != nil {
-		return err
-	}
 
 	ops := []clientv3.Op{}
-	cmps := []clientv3.Cmp{clientv3.Compare(clientv3.ModRevision(key), "=", resp.Kvs[0].ModRevision)}
+	cmps := []clientv3.Cmp{clientv3.Compare(clientv3.ModRevision(key), "=", u.ModRev)}
 	if len(mu.UniqueName) > 0 {
 		oldUniqueNameKey := stateKey(fmt.Sprintf("/%s/%s", tools.UniqueName, u.UniqueName))
 		uniqueNameKey := stateKey(fmt.Sprintf("/%s/%s", tools.UniqueName, mu.UniqueName))
@@ -78,6 +76,10 @@ func (u *User) Modify(mu ModifiableUser) error {
 
 	if len(mu.Bio) > 0 {
 		u.Bio = mu.Bio
+	}
+
+	if len(mu.Bg) > 0 {
+		u.Bg = mu.Bg
 	}
 
 	b, err := json.Marshal(u)

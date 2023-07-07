@@ -23,6 +23,7 @@ type Session struct {
 	Bio          string `json:"bio"`
 	VerifiedCode int64  `json:"verifiedCode"`
 	Admin        bool   `json:"admin"`
+	Bg           string `json:"bg"`
 }
 
 func (s *Session) ToUser() *ActUser {
@@ -176,6 +177,7 @@ func CreateSession(opts *UserOptions) (*Session, error) {
 		Name:         u.Name,
 		UniqueName:   u.UniqueName,
 		Picture:      u.Picture,
+		Bg:           u.Bg,
 		Locale:       u.Locale,
 		Bio:          u.Bio,
 		VerifiedCode: u.VerifiedCode,

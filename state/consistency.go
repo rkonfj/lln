@@ -44,6 +44,7 @@ func startKeepConsistency() {
 
 func keepStatusUserConsistentLoop() {
 	for e := range UserChanged {
+		logrus.Debugf("user %s changed, updating status", e.ID)
 		lastRev := int64(0)
 		for {
 			ss, more := e.ListStatus(&tools.PaginationOptions{After: lastRev, Size: 20})
@@ -56,11 +57,13 @@ func keepStatusUserConsistentLoop() {
 				}
 				if s.User.Name != e.Name ||
 					s.User.UniqueName != e.UniqueName ||
+					s.User.Picture != e.Picture ||
 					s.User.VerifiedCode != e.VerifiedCode {
 					key := stateKey(fmt.Sprintf("/status/%s", s.ID))
 					s.User.Name = e.Name
 					s.User.UniqueName = e.UniqueName
 					s.User.VerifiedCode = e.VerifiedCode
+					s.User.Picture = e.Picture
 					b, err := json.Marshal(s)
 					if err != nil {
 						logrus.Debug(err)
