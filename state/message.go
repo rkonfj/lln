@@ -28,6 +28,7 @@ type Message struct {
 	Type       string    `json:"type"`
 	TargetID   string    `json:"targetID"`
 	CreateTime time.Time `json:"createTime"`
+	CreateRev  int64     `json:"createRev"`
 }
 
 func ListMessages(user *ActUser, opts *tools.PaginationOptions) (msgs []*Message, more bool) {
@@ -57,6 +58,7 @@ func ListMessages(user *ActUser, opts *tools.PaginationOptions) (msgs []*Message
 			logrus.Error("ListMessages unmarshal error: ", err)
 			continue
 		}
+		msg.CreateRev = kv.CreateRevision
 		msgs = append(msgs, msg)
 	}
 	return
