@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/decred/base58"
 	"github.com/rkonfj/lln/storage"
@@ -16,7 +17,10 @@ func signRequest(w http.ResponseWriter, r *http.Request) {
 	if len(object) == 0 {
 		object = base58.Encode(xid.New().Bytes())
 	}
-	url, err := storage.S3SignRequest(user.ID, object)
+	timePrefix := time.Now().Format("20060102")
+
+	ns := fmt.Sprintf("%s/%s", timePrefix, user.ID)
+	url, err := storage.S3SignRequest(ns, object)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, err.Error())
@@ -25,6 +29,6 @@ func signRequest(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode(R{V: map[string]string{
 		"url":  url,
-		"path": fmt.Sprintf("/%s/%s", user.ID, object),
+		"path": fmt.Sprintf("/%s/%s", ns, object),
 	}})
 }

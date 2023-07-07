@@ -28,6 +28,13 @@ state:
     certFile: 
     keyFile:
     trustedCAFile: 
+storage:
+  s3:
+    accessKeyID: xxx
+    secretAccessKey: xxx
+    endpoint: cos.ap-guangzhou.myqcloud.com
+    region: ap-guangzhou
+    bucket: xxx
 model:
   status:
     contentListLimit: 20

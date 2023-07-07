@@ -14,22 +14,27 @@ var (
 )
 
 type Config struct {
-	Listen string      `yaml:"listen"`
-	OIDC   []*OIDC     `yaml:"oidc"`
-	State  StateConfig `yaml:"state"`
-	Model  ModelConfig `yaml:"model"`
-	Admins []string    `yaml:"admins"`
-	S3     S3Config    `yaml:"s3"`
+	Admins  []string      `yaml:"admins"`
+	Listen  string        `yaml:"listen"`
+	Model   ModelConfig   `yaml:"model"`
+	OIDC    []*OIDC       `yaml:"oidc"`
+	State   StateConfig   `yaml:"state"`
+	Storage StorageConfig `yaml:"storage"`
 }
 
 type StateConfig struct {
 	Etcd *EtcdConfig `yaml:"etcd"`
 }
+
 type EtcdConfig struct {
 	Endpoints     []string `yaml:"endpoints"`
 	CertFile      string   `yaml:"certFile,omitempty"`
 	KeyFile       string   `yaml:"keyFile,omitempty"`
 	TrustedCAFile string   `yaml:"trustedCAFile,omitempty"`
+}
+
+type StorageConfig struct {
+	S3 S3Config `yaml:"s3"`
 }
 
 // LoadConfig init config package and export `config.Conf`
