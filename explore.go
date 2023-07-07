@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/rkonfj/lln/state"
 	"github.com/rkonfj/lln/tools"
 	"github.com/sirupsen/logrus"
@@ -39,13 +40,45 @@ func explore(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(L{V: ret, More: more})
 }
 
+type NewsProbeResponse struct {
+	News        int              `json:"news"`
+	CommentsMap map[string]int64 `json:"cm"`
+	LikesMap    map[string]int64 `json:"lm"`
+}
+
 func exploreNewsProbe(w http.ResponseWriter, r *http.Request) {
-	after, err := tools.URLQueryInt64(r, "after")
+	maxCreateRev, err := tools.URLQueryInt64(r, "max")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	minCreateRev, err := tools.URLQueryInt64(r, "min")
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, err.Error())
 		return
 	}
 	user := currentSessionUser(r)
-	json.NewEncoder(w).Encode(R{V: state.RecommendCount(user, after)})
+	probeResp := NewsProbeResponse{
+		News:        state.RecommendCount(user, maxCreateRev),
+		CommentsMap: state.CommentsMap(minCreateRev, maxCreateRev),
+		LikesMap:    state.LikesMap(minCreateRev, maxCreateRev),
+	}
+	json.NewEncoder(w).Encode(R{V: probeResp})
+}
+
+func exploreStatusComment(w http.ResponseWriter, r *http.Request) {
+	meta, err := state.NewCommentsRecommandMeta(chi.URLParam(r, tools.StatusID))
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	s := meta.Recommand()
+	if s != nil {
+		json.NewEncoder(w).Encode(R{V: castStatus(s, currentSessionUser(r))})
+		return
+	}
+	json.NewEncoder(w).Encode(R{})
 }

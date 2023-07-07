@@ -47,6 +47,7 @@ func routeAnonymous(r *chi.Mux) {
 		r.Get(fmt.Sprintf("/user/{%s}/status", tools.UniqueName), userStatus)
 		r.Get(fmt.Sprintf("/status/{%s}", tools.StatusID), status)
 		r.Get(fmt.Sprintf("/status/{%s}/comments", tools.StatusID), statusComments)
+		r.Get(fmt.Sprintf("/explore/status/{%s}/comment", tools.StatusID), exploreStatusComment)
 		r.Get("/search", search)
 		r.Get("/explore", explore)
 		r.Get("/explore/news-probe", exploreNewsProbe)

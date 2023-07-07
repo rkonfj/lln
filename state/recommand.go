@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/rkonfj/lln/tools"
 	"github.com/sirupsen/logrus"
@@ -110,4 +111,36 @@ func (m *CommentsRecommandMeta) RunRecommand(statusCreateRev int64) error {
 
 func calcScore(c *Status) float64 {
 	return float64((c.User.VerifiedCode+9)/10*2) + float64(c.Comments)*1.5 + float64(c.LikeCount)*1.2 + float64(c.Bookmarks)*1
+}
+
+func CommentsMap(minCreateRev, maxCreateRev int64) map[string]int64 {
+	cm := make(map[string]int64)
+	for _, id := range listStatusByCreateRev(minCreateRev, maxCreateRev) {
+		cm[id] = commentsCount(id)
+	}
+	return cm
+}
+
+func LikesMap(minCreateRev, maxCreateRev int64) map[string]int64 {
+	cm := make(map[string]int64)
+	for _, id := range listStatusByCreateRev(minCreateRev, maxCreateRev) {
+		cm[id] = likeCount(id)
+	}
+	return cm
+}
+
+func listStatusByCreateRev(minCreateRev, maxCreateRev int64) []string {
+	resp, err := etcdClient.KV.Get(context.Background(), stateKey("/recommended/status/"),
+		clientv3.WithKeysOnly(), clientv3.WithPrefix(),
+		clientv3.WithMinCreateRev(minCreateRev), clientv3.WithMaxCreateRev(maxCreateRev))
+	if err != nil {
+		return nil
+	}
+
+	var ss []string
+	for _, kv := range resp.Kvs {
+		s := strings.Split(string(kv.Key), "/")
+		ss = append(ss, s[len(s)-1])
+	}
+	return ss
 }
