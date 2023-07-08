@@ -31,15 +31,15 @@ func userVerified(w http.ResponseWriter, r *http.Request) {
 	state.DefaultSessionManager.Expire(u.ID)
 }
 
-func recommandStatus(w http.ResponseWriter, r *http.Request) {
-	if err := state.RecommandStatus(chi.URLParam(r, tools.StatusID)); err != nil {
+func recommendStatus(w http.ResponseWriter, r *http.Request) {
+	if err := state.RecommendStatus(chi.URLParam(r, tools.StatusID)); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, err.Error())
 	}
 }
 
-func notRecommandStatus(w http.ResponseWriter, r *http.Request) {
-	if err := state.NotRecommandStatus(chi.URLParam(r, tools.StatusID)); err != nil {
+func notRecommendStatus(w http.ResponseWriter, r *http.Request) {
+	if err := state.NotRecommendStatus(chi.URLParam(r, tools.StatusID)); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, err.Error())
 	}

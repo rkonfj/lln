@@ -181,14 +181,14 @@ func NewStatus(opts *StatusOptions) (*Status, error) {
 	return s, nil
 }
 
-func RecommandStatus(statusID string) error {
+func RecommendStatus(statusID string) error {
 	key := stateKey(fmt.Sprintf("/recommended/status/%s", statusID))
 	statusKey := stateKey(fmt.Sprintf("/status/%s", statusID))
 	_, err := etcdClient.KV.Put(context.Background(), key, statusKey)
 	return err
 }
 
-func NotRecommandStatus(statusID string) error {
+func NotRecommendStatus(statusID string) error {
 	key := stateKey(fmt.Sprintf("/recommended/status/%s", statusID))
 	_, err := etcdClient.KV.Delete(context.Background(), key)
 	return err

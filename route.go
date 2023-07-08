@@ -12,8 +12,8 @@ func routeAdmin(r *chi.Mux) {
 	r.Route("/v", func(r chi.Router) {
 		r.Use(common, admin)
 		r.Put(fmt.Sprintf("/user/{%s}/verified", tools.UID), userVerified)
-		r.Post(fmt.Sprintf("/status/{%s}/recommand", tools.StatusID), recommandStatus)
-		r.Delete(fmt.Sprintf("/status/{%s}/recommand", tools.StatusID), notRecommandStatus)
+		r.Post(fmt.Sprintf("/status/{%s}/recommend", tools.StatusID), recommendStatus)
+		r.Delete(fmt.Sprintf("/status/{%s}/recommend", tools.StatusID), notRecommendStatus)
 	})
 }
 
