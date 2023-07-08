@@ -61,6 +61,9 @@ func status(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	state.SVCM.Viewed(statusID)
+	logrus.WithField("ip", r.RemoteAddr).
+		WithField("status", statusID).
+		WithField("ua", r.Header.Get("User-Agent")).Info()
 	json.NewEncoder(w).Encode(status)
 }
 
