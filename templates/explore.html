@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <title>Explore</title>
+</head>
+<body>
+    <ul>
+        {{range $status := .}}
+        <li>
+            <a href="/{{$status.User.UniqueName}}">{{$status.User.Name}} (@{{$status.User.UniqueName}})</a>
+            <p>{{(index $status.Content 0).Value}} <a href="/{{$status.User.UniqueName}}/status/{{$status.ID}}">Show More</a></p>
+        </li>
+        {{end}}
+    </ul>
+</body>
+</html>

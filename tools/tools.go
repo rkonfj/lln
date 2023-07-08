@@ -37,6 +37,14 @@ func Contains(strSlice []string, searchString string) bool {
 	return false
 }
 
+func Reverse[T any](slice []T) {
+	length := len(slice)
+	for i := 0; i < length/2; i++ {
+		j := length - i - 1
+		slice[i], slice[j] = slice[j], slice[i]
+	}
+}
+
 func URLQueryInt64Default(r *http.Request, key string, defaultValue int64) (value int64, err error) {
 	value = defaultValue
 	str := r.URL.Query().Get(key)

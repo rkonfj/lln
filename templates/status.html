@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <title>{{ .overview }}</title>
+</head>
+<body>
+    <a href="/explore">Explore</a>
+    <h2>Timeline</h2>
+    <ul>
+        {{range $index, $status := .list}}
+        <li>
+            <a href="/{{$status.User.UniqueName}}">{{$status.User.Name}} (@{{$status.User.UniqueName}})</a>
+            {{if last $index $.list}}
+            {{range $content := $status.Content}}
+            <p>{{$content.Value}}</p>
+            {{end}}
+            {{else}}
+            <p>{{(index $status.Content 0).Value}} <a href="/{{$status.User.UniqueName}}/status/{{$status.ID}}">Show More</a></p>
+            {{end}}
+        </li>
+        {{end}}
+    </ul>
+    <h2>Comments</h2>
+    <ul>
+        {{range $status := .comments}}
+        <li>
+            <a href="/{{$status.User.UniqueName}}">{{$status.User.Name}} (@{{$status.User.UniqueName}})</a>
+            <p>{{(index $status.Content 0).Value}} <a href="/{{$status.User.UniqueName}}/status/{{$status.ID}}">Show More</a></p>
+        </li>
+        {{end}}
+    </ul>
+</body>
+</html>

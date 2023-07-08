@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <title>{{.profile.Name}} (@{{.profile.UniqueName}})</title>
+</head>
+<body>
+    <h2>Profile</h2>
+    <div>Name: {{.profile.Name}} @{{.profile.UniqueName}}</div>
+    <div>Bio: {{.profile.Bio}}</div>
+    <h2>Tweets</h2>
+    <ul>
+        {{range $status := .list}}
+        <li>
+            <a href="/{{$status.User.UniqueName}}">{{$status.User.Name}} (@{{$status.User.UniqueName}})</a>
+            <p>{{(index $status.Content 0).Value}} <a href="/{{$status.User.UniqueName}}/status/{{$status.ID}}">Show More</a></p>
+        </li>
+        {{end}}
+    </ul>
+</body>
+</html>

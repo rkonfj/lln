@@ -72,6 +72,7 @@ func startDeamon(cmd *cobra.Command, args []string) error {
 	routeAnonymous(r)
 	routeMustLogin(r)
 	routeAdmin(r)
+	routeHTML(r)
 
 	logrus.Infof("listen %s for http now", config.Conf.Listen)
 	return http.ListenAndServe(config.Conf.Listen, r)

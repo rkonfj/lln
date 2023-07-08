@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -35,6 +36,15 @@ type Status struct {
 	Liked      bool                    `json:"liked"`
 	Bookmarked bool                    `json:"bookmarked"`
 	Followed   bool                    `json:"followed"`
+}
+
+func (s *Status) Overview() string {
+	for _, c := range s.Content {
+		if c.Type == "text" {
+			return strings.TrimSpace(strings.ReplaceAll(c.Value, "\n", ""))
+		}
+	}
+	return ""
 }
 
 var labelsRegex = regexp.MustCompile(`#([\p{L}\d_]+)`)

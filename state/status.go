@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/decred/base58"
@@ -43,7 +44,7 @@ type StatusFragment struct {
 func (s *Status) Overview() string {
 	for _, c := range s.Content {
 		if c.Type == "text" {
-			return c.Value
+			return strings.TrimSpace(strings.ReplaceAll(c.Value, "\n", ""))
 		}
 	}
 	return ""

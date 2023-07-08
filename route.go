@@ -55,6 +55,13 @@ func routeAnonymous(r *chi.Mux) {
 	})
 }
 
+func routeHTML(r *chi.Mux) {
+	r.Get("/", exploreHTML)
+	r.Get("/explore", exploreHTML)
+	r.Get(fmt.Sprintf("/{%s}", tools.UniqueName), profileHTML)
+	r.Get(fmt.Sprintf("/{%s}/status/{%s}", tools.UniqueName, tools.StatusID), statusHTML)
+}
+
 type L struct {
 	V    any    `json:"v"`
 	Code uint16 `json:"code"`
