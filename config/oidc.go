@@ -98,3 +98,10 @@ func initOpenIDConnect() {
 func GetOIDCProvider(provider string) *OIDCProvider {
 	return oidcProviders[provider]
 }
+
+func OIDCProviders() (p []string) {
+	for _, provider := range Conf.OIDC {
+		p = append(p, provider.Provider)
+	}
+	return
+}
