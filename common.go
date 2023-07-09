@@ -31,6 +31,7 @@ func castStatus(s *state.Status, sessionUser *state.ActUser) *Status {
 		Views:      s.Views,
 		LikeCount:  s.LikeCount,
 		Bookmarks:  s.Bookmarks,
+		Disabled:   s.Disabled,
 		Liked:      liked,
 		Bookmarked: bookmarked,
 		Followed:   followed,

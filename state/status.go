@@ -34,6 +34,7 @@ type Status struct {
 	LikeCount  int64             `json:"likeCount"`
 	Views      int64             `json:"views"`
 	Bookmarks  int64             `json:"bookmarks"`
+	Disabled   bool              `json:"disabled"`
 }
 
 type StatusFragment struct {
@@ -122,7 +123,6 @@ func NewStatus(opts *StatusOptions) (*Status, error) {
 		return nil, err
 	}
 
-	txn := etcdClient.Txn(context.Background())
 	statusKey := stateKey(fmt.Sprintf("/status/%s", s.ID))
 	userStatusKey := stateKey(fmt.Sprintf("/%s/status/%s", s.User.ID, s.ID))
 	statusCommentsKey := stateKey(fmt.Sprintf("/comments/status/%s/%s", s.RefStatus, s.ID))
@@ -133,8 +133,11 @@ func NewStatus(opts *StatusOptions) (*Status, error) {
 		clientv3.OpPut(statusProbeKey, s.ID),
 	}
 
+	cmps := []clientv3.Cmp{}
+
 	if len(s.RefStatus) > 0 {
 		refProbeKey := stateKey(fmt.Sprintf("/probe/status/%s", s.RefStatus))
+		cmps = append(cmps, clientv3.Compare(clientv3.Version(refProbeKey), "!=", 0))
 		ops = append(ops, clientv3.OpPut(statusCommentsKey, statusKey))
 		ops = append(ops, clientv3.OpPut(refProbeKey, s.ID))
 		s := GetStatus(s.RefStatus)
@@ -173,7 +176,7 @@ func NewStatus(opts *StatusOptions) (*Status, error) {
 		}
 	}
 
-	_, err = txn.Then(ops...).Commit()
+	_, err = etcdClient.Txn(context.Background()).If(cmps...).Then(ops...).Commit()
 
 	if err != nil {
 		return nil, err
@@ -295,5 +298,15 @@ func unmarshalStatus(b []byte, cRev int64) (s *Status, err error) {
 	s.LikeCount = likeCount(s.ID)
 	s.Views = viewCount(s.ID)
 	s.Bookmarks = bookmarkCount(s.ID)
+	s.Disabled = statusDisabled(s.ID)
 	return s, nil
+}
+
+func statusDisabled(statusID string) bool {
+	resp, err := etcdClient.KV.Get(context.Background(), stateKey(fmt.Sprintf("/probe/status/%s", statusID)))
+	if err != nil {
+		logrus.Error("statusDisabled etcd error:", err.Error())
+		return false
+	}
+	return resp.Count == 0
 }

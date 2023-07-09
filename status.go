@@ -36,6 +36,7 @@ type Status struct {
 	Liked      bool                    `json:"liked"`
 	Bookmarked bool                    `json:"bookmarked"`
 	Followed   bool                    `json:"followed"`
+	Disabled   bool                    `json:"disabled"`
 }
 
 func (s *Status) Overview() string {
