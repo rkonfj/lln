@@ -9,7 +9,7 @@
     <ul>
         {{range $index, $status := .list}}
         <li>
-            <a href="/{{$status.User.UniqueName}}">{{$status.User.Name}} (@{{$status.User.UniqueName}})</a>
+            <a href="/{{$status.User.UniqueName}}">{{$status.User.Name}} (@{{$status.User.UniqueName}})</a> <time>{{$status.CreateTime}}</time>
             {{if last $index $.list}}
             {{range $content := $status.Content}}
             {{md $content.Value}}
