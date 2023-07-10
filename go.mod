@@ -7,6 +7,7 @@ require (
 	github.com/coreos/go-oidc/v3 v3.6.0
 	github.com/decred/base58 v1.0.5
 	github.com/go-chi/chi/v5 v5.0.8
+	github.com/gomarkdown/markdown v0.0.0-20230322041520-c84983bdbf2a
 	github.com/rs/xid v1.5.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.7.0

@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"html/template"
 	"net/http"
 	"net/url"
+	"text/template"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/gomarkdown/markdown"
 	"github.com/rkonfj/lln/state"
 	"github.com/rkonfj/lln/templates"
 	"github.com/rkonfj/lln/tools"
@@ -19,24 +20,29 @@ var (
 )
 
 func init() {
-	t, err := template.New("status").Funcs(template.FuncMap{
+	funcMap := template.FuncMap{
 		"last": func(index int, data any) bool {
 			slice := data.([]*Status)
 			return index == len(slice)-1
 		},
-	}).Parse(templates.Status)
+		"md": func(md string) string {
+			return string(markdown.ToHTML([]byte(md), nil, nil))
+		},
+	}
+
+	t, err := template.New("status").Funcs(funcMap).Parse(templates.Status)
 	if err != nil {
 		panic(err)
 	}
 	statusTemplate = t
 
-	t, err = template.New("profile").Parse(templates.Profile)
+	t, err = template.New("profile").Funcs(funcMap).Parse(templates.Profile)
 	if err != nil {
 		panic(err)
 	}
 	profileTemplate = t
 
-	t, err = template.New("explore").Parse(templates.Explore)
+	t, err = template.New("explore").Funcs(funcMap).Parse(templates.Explore)
 	if err != nil {
 		panic(err)
 	}

@@ -8,7 +8,7 @@
         {{range $status := .}}
         <li>
             <a href="/{{$status.User.UniqueName}}">{{$status.User.Name}} (@{{$status.User.UniqueName}})</a>
-            <p>{{(index $status.Content 0).Value}} <a href="/{{$status.User.UniqueName}}/status/{{$status.ID}}">Show More</a></p>
+            {{md (index $status.Content 0).Value}} <a href="/{{$status.User.UniqueName}}/status/{{$status.ID}}">Show More</a>
         </li>
         {{end}}
     </ul>

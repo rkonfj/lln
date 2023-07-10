@@ -12,10 +12,10 @@
             <a href="/{{$status.User.UniqueName}}">{{$status.User.Name}} (@{{$status.User.UniqueName}})</a>
             {{if last $index $.list}}
             {{range $content := $status.Content}}
-            <p>{{$content.Value}}</p>
+            {{md $content.Value}}
             {{end}}
             {{else}}
-            <p>{{(index $status.Content 0).Value}} <a href="/{{$status.User.UniqueName}}/status/{{$status.ID}}">Show More</a></p>
+            {{md (index $status.Content 0).Value}} <a href="/{{$status.User.UniqueName}}/status/{{$status.ID}}">Show More</a>
             {{end}}
         </li>
         {{end}}
@@ -25,7 +25,7 @@
         {{range $status := .comments}}
         <li>
             <a href="/{{$status.User.UniqueName}}">{{$status.User.Name}} (@{{$status.User.UniqueName}})</a>
-            <p>{{(index $status.Content 0).Value}} <a href="/{{$status.User.UniqueName}}/status/{{$status.ID}}">Show More</a></p>
+            {{md (index $status.Content 0).Value}} <a href="/{{$status.User.UniqueName}}/status/{{$status.ID}}">Show More</a>
         </li>
         {{end}}
     </ul>
