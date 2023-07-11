@@ -60,6 +60,7 @@ func routeAnonymous(r *chi.Mux) {
 func routeHTML(r *chi.Mux) {
 	r.Get("/", exploreHTML)
 	r.Get("/explore", exploreHTML)
+	r.Get("/friends", friendsHTML)
 	r.Get(fmt.Sprintf("/{%s}", tools.UniqueName), profileHTML)
 	r.Get(fmt.Sprintf("/{%s}/status/{%s}", tools.UniqueName, tools.StatusID), statusHTML)
 }

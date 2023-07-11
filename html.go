@@ -17,6 +17,7 @@ var (
 	statusTemplate  *template.Template
 	profileTemplate *template.Template
 	exploreTemplate *template.Template
+	friendsTemplate *template.Template
 )
 
 func init() {
@@ -47,6 +48,12 @@ func init() {
 		panic(err)
 	}
 	exploreTemplate = t
+
+	t, err = template.New("friends").Funcs(funcMap).Parse(templates.Friends)
+	if err != nil {
+		panic(err)
+	}
+	friendsTemplate = t
 }
 
 func statusHTML(w http.ResponseWriter, r *http.Request) {
@@ -138,6 +145,19 @@ func exploreHTML(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := exploreTemplate.Execute(w, ss); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+	}
+}
+
+func friendsHTML(w http.ResponseWriter, r *http.Request) {
+	settings, err := state.GetSettings()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	if err := friendsTemplate.Execute(w, settings.Friends); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
 	}

@@ -13,3 +13,6 @@ var Profile string
 
 //go:embed explore.html
 var Explore string
+
+//go:embed friends.html
+var Friends string

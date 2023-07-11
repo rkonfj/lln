@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Friend Links</title>
+    <style>
+        li {
+            margin-left: -20px;
+        }
+    </style>
+</head>
+<body>
+    <nav><a href="/explore">Explore</a></nav>
+    <ul>
+        {{range $link := .}}
+        <li>
+            <a href="{{$link.URL}}">{{$link.Title}}</a>
+            <p>{{$link.Desc}}</p>
+        </li>
+        {{end}}
+    </ul>
+</body>
+</html>
