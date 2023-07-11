@@ -11,6 +11,7 @@ type Settings struct {
 	TermsOfService string   `json:"termsOfService"`
 	PrivacyPolicy  string   `json:"privacyPolicy"`
 	Friends        []Friend `json:"friends"`
+	Announcement   string   `json:"announcement"`
 	ModRev         int64    `json:"modRev"`
 }
 
