@@ -5,6 +5,9 @@ import _ "embed"
 //go:embed 404.html
 var NotFound string
 
+//go:embed head.html
+var Head string
+
 //go:embed status.html
 var Status string
 

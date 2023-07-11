@@ -31,25 +31,25 @@ func init() {
 		},
 	}
 
-	t, err := template.New("status").Funcs(funcMap).Parse(templates.Status)
+	t, err := template.New("status").Funcs(funcMap).Parse(templates.Head + templates.Status)
 	if err != nil {
 		panic(err)
 	}
 	statusTemplate = t
 
-	t, err = template.New("profile").Funcs(funcMap).Parse(templates.Profile)
+	t, err = template.New("profile").Funcs(funcMap).Parse(templates.Head + templates.Profile)
 	if err != nil {
 		panic(err)
 	}
 	profileTemplate = t
 
-	t, err = template.New("explore").Funcs(funcMap).Parse(templates.Explore)
+	t, err = template.New("explore").Funcs(funcMap).Parse(templates.Head + templates.Explore)
 	if err != nil {
 		panic(err)
 	}
 	exploreTemplate = t
 
-	t, err = template.New("friends").Funcs(funcMap).Parse(templates.Friends)
+	t, err = template.New("friends").Funcs(funcMap).Parse(templates.Head + templates.Friends)
 	if err != nil {
 		panic(err)
 	}
