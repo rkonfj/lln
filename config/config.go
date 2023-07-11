@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
@@ -15,9 +16,9 @@ var (
 
 type Config struct {
 	Admins  []string      `yaml:"admins"`
-	Listen  string        `yaml:"listen"`
 	Model   ModelConfig   `yaml:"model"`
 	OIDC    []*OIDC       `yaml:"oidc"`
+	Server  ServerConfig  `yaml:"server"`
 	State   StateConfig   `yaml:"state"`
 	Storage StorageConfig `yaml:"storage"`
 }
@@ -37,6 +38,16 @@ type StorageConfig struct {
 	S3 S3Config `yaml:"s3"`
 }
 
+type ServerConfig struct {
+	Listen    string          `yaml:"listen"`
+	Ratelimit RatelimitConfig `yaml:"ratelimit"`
+}
+
+type RatelimitConfig struct {
+	Window   time.Duration `yaml:"window"`
+	Requests int           `yaml:"requests"`
+}
+
 // LoadConfig init config package and export `config.Conf`
 func LoadConfig(configPath string) error {
 	logrus.Info("loading config from ", configPath)
@@ -49,6 +60,18 @@ func LoadConfig(configPath string) error {
 	err = yaml.Unmarshal([]byte(os.ExpandEnv(string(b))), Conf)
 	if err != nil {
 		return err
+	}
+
+	if len(Conf.Server.Listen) == 0 {
+		Conf.Server.Listen = "127.0.0.1:8876"
+	}
+
+	if Conf.Server.Ratelimit.Window == 0 {
+		Conf.Server.Ratelimit.Window = time.Duration(10 * time.Second)
+	}
+
+	if Conf.Server.Ratelimit.Requests == 0 {
+		Conf.Server.Ratelimit.Requests = 20
 	}
 
 	if Conf.State.Etcd == nil {

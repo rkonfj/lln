@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/httprate"
 	"github.com/rkonfj/lln/config"
 	"github.com/rkonfj/lln/state"
 	"github.com/rkonfj/lln/tools"
@@ -68,12 +69,13 @@ func startDeamon(cmd *cobra.Command, args []string) error {
 	r := chi.NewRouter()
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
+	r.Use(httprate.LimitByIP(config.Conf.Server.Ratelimit.Requests, config.Conf.Server.Ratelimit.Window))
 
 	routeAnonymous(r)
 	routeMustLogin(r)
 	routeAdmin(r)
 	routeHTML(r)
 
-	logrus.Infof("listen %s for http now", config.Conf.Listen)
-	return http.ListenAndServe(config.Conf.Listen, r)
+	logrus.Infof("listen %s for http now", config.Conf.Server.Listen)
+	return http.ListenAndServe(config.Conf.Server.Listen, r)
 }

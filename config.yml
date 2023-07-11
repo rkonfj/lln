@@ -1,4 +1,8 @@
-listen: 127.0.0.1:8876
+server:
+  listen: 127.0.0.1:8876
+  ratelimit:
+    window: 10s
+    requests: 20
 oidc:
 - provider: google
   issuer: https://accounts.google.com

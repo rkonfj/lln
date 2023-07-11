@@ -7,6 +7,7 @@ require (
 	github.com/coreos/go-oidc/v3 v3.6.0
 	github.com/decred/base58 v1.0.5
 	github.com/go-chi/chi/v5 v5.0.8
+	github.com/go-chi/httprate v0.7.4
 	github.com/gomarkdown/markdown v0.0.0-20230322041520-c84983bdbf2a
 	github.com/rs/xid v1.5.0
 	github.com/sirupsen/logrus v1.9.3
@@ -18,6 +19,7 @@ require (
 )
 
 require (
+	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/coreos/etcd v3.3.27+incompatible // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
