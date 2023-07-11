@@ -21,6 +21,25 @@ oidc:
   scopes:
     - read:user
     - user:email
+- provider: gitlab
+  issuer: https://gitlab.com
+  clientID: ${OIDC_GITLAB_CLIENT_ID}
+  clientSecret: ${OIDC_GITLAB_CLIENT_SECRET}
+  redirect: ${OIDC_GITLAB_REDIRECT}
+  scopes:
+    - openid
+    - profile
+    - email
+- provider: microsoft
+  issuer: https://sts.windows.net/${OIDC_MICROSOFT_TENANT_ID}/
+  clientID: ${OIDC_MICROSOFT_CLIENT_ID}
+  clientSecret: ${OIDC_MICROSOFT_CLIENT_SECRET}
+  redirect: ${OIDC_MICROSOFT_REDIRECT}
+  trustEmail: true
+  scopes:
+    - openid
+    - profile
+    - email
 state:
   etcd:
     endpoints:
