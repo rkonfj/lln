@@ -19,6 +19,7 @@ type User struct {
 	Followers  int64 `json:"followers"`
 	Followings int64 `json:"followings"`
 	Tweets     int64 `json:"tweets"`
+	Disabled   bool  `json:"disabled"`
 }
 
 func profile(w http.ResponseWriter, r *http.Request) {
@@ -45,6 +46,7 @@ func profile(w http.ResponseWriter, r *http.Request) {
 		Followers:  u.Followers(),
 		Followings: u.Followings(),
 		Tweets:     u.Tweets(),
+		Disabled:   u.Disabled(),
 		Following:  u.FollowingBy(user)})
 }
 

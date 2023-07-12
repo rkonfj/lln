@@ -15,6 +15,8 @@ func routeAdmin(r *chi.Mux) {
 		r.Put("/settings", putSettings)
 		r.Post(fmt.Sprintf("/status/{%s}/recommend", tools.StatusID), recommendStatus)
 		r.Delete(fmt.Sprintf("/status/{%s}/recommend", tools.StatusID), notRecommendStatus)
+		r.Post(fmt.Sprintf("/user/{%s}/disabled", tools.UID), disableUser)
+		r.Delete(fmt.Sprintf("/user/{%s}/disabled", tools.UID), enableUser)
 	})
 }
 

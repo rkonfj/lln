@@ -44,3 +44,29 @@ func notRecommendStatus(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, err.Error())
 	}
 }
+
+func disableUser(w http.ResponseWriter, r *http.Request) {
+	u := state.UserByID(chi.URLParam(r, tools.UID))
+	if u == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	err := u.Disable()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+	}
+}
+
+func enableUser(w http.ResponseWriter, r *http.Request) {
+	u := state.UserByID(chi.URLParam(r, tools.UID))
+	if u == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	err := u.Enable()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+	}
+}

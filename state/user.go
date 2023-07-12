@@ -163,6 +163,25 @@ func (u *User) SetVerified(code int64) error {
 	return nil
 }
 
+func (u *User) Disable() error {
+	_, err := etcdClient.KV.Put(context.Background(), stateKey(fmt.Sprintf("/disabled/user/%s", u.ID)), "")
+	return err
+}
+
+func (u *User) Disabled() bool {
+	r, err := etcdClient.KV.Get(context.Background(), stateKey(fmt.Sprintf("/disabled/user/%s", u.ID)))
+	if err != nil {
+		logrus.Error(err)
+		return false
+	}
+	return r.Count == 1
+}
+
+func (u *User) Enable() error {
+	_, err := etcdClient.KV.Delete(context.Background(), stateKey(fmt.Sprintf("/disabled/user/%s", u.ID)))
+	return err
+}
+
 func Followed(u1, u2 string) bool {
 	resp, err := etcdClient.KV.Get(context.Background(), stateKey(fmt.Sprintf(tFollowUser, u2, u1)), clientv3.WithCountOnly())
 	if err != nil {

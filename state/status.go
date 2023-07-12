@@ -127,13 +127,16 @@ func NewStatus(opts *StatusOptions) (*Status, error) {
 	userStatusKey := stateKey(fmt.Sprintf("/%s/status/%s", s.User.ID, s.ID))
 	statusCommentsKey := stateKey(fmt.Sprintf("/comments/status/%s/%s", s.RefStatus, s.ID))
 	statusProbeKey := stateKey(fmt.Sprintf("/probe/status/%s", s.ID))
+	userDisabledKey := stateKey(fmt.Sprintf("/disabled/user/%s", opts.User.ID))
 	ops := []clientv3.Op{
 		clientv3.OpPut(statusKey, string(b)),
 		clientv3.OpPut(userStatusKey, statusKey),
 		clientv3.OpPut(statusProbeKey, s.ID),
 	}
 
-	cmps := []clientv3.Cmp{}
+	cmps := []clientv3.Cmp{
+		clientv3.Compare(clientv3.Version(userDisabledKey), "=", 0),
+	}
 
 	if len(s.RefStatus) > 0 {
 		refProbeKey := stateKey(fmt.Sprintf("/probe/status/%s", s.RefStatus))
@@ -176,10 +179,12 @@ func NewStatus(opts *StatusOptions) (*Status, error) {
 		}
 	}
 
-	_, err = etcdClient.Txn(context.Background()).If(cmps...).Then(ops...).Commit()
-
+	resp, err := etcdClient.Txn(context.Background()).If(cmps...).Then(ops...).Commit()
 	if err != nil {
 		return nil, err
+	}
+	if !resp.Succeeded {
+		return nil, ErrTryAgainLater
 	}
 	return s, nil
 }
