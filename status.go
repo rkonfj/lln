@@ -268,15 +268,6 @@ func deleteStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, f := range s.ContentsByType("text") {
-		matches := labelsRegex.FindAllStringSubmatch(f.Value, -1)
-		if len(matches) > 0 {
-			w.WriteHeader(http.StatusForbidden)
-			fmt.Fprint(w, state.ErrStatusQuotes)
-			return
-		}
-	}
-
 	err := s.Delete(r.Context().Value(tools.KeySessionUID).(string))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
