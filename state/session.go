@@ -167,12 +167,15 @@ func (sm *PersistentSessionManager) Delete(apiKey string) error {
 
 var DefaultSessionManager SessionManager
 
-func CreateSession(opts *UserOptions) (*Session, error) {
+func CreateSession(opts *UserOptions) (s *Session, err error) {
 	u := UserByEmail(opts.Email)
 	if u == nil {
-		u = NewUser(opts)
+		u, err = NewUser(opts)
+		if err != nil {
+			return
+		}
 	}
-	s := &Session{
+	s = &Session{
 		ID:           u.ID,
 		Name:         u.Name,
 		UniqueName:   u.UniqueName,

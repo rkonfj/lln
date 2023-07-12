@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/decred/base58"
@@ -15,9 +16,10 @@ import (
 )
 
 var (
-	tUser          string = "/user/%s"
-	tFollowUser    string = "/user/%s/follow/%s"
-	tFollowingUser string = "/user/%s/following/%s"
+	tUser           string         = "/user/%s"
+	tFollowUser     string         = "/user/%s/follow/%s"
+	tFollowingUser  string         = "/user/%s/following/%s"
+	UniqueNameRegex *regexp.Regexp = regexp.MustCompile(`^[\p{L}\d_]+$`)
 )
 
 type ModifiableUser struct {
@@ -219,8 +221,8 @@ func castUser(resp *clientv3.GetResponse, err error) *User {
 	return u
 }
 
-func NewUser(opts *UserOptions) *User {
-	u := &User{
+func NewUser(opts *UserOptions) (u *User, err error) {
+	u = &User{
 		Name:       opts.Name,
 		Email:      opts.Email,
 		Picture:    opts.Picture,
@@ -232,30 +234,48 @@ func NewUser(opts *UserOptions) *User {
 	// generate a User ID
 	u.ID = base58.Encode(xid.New().Bytes())
 
-	// generate a User UniqueName
-	u.UniqueName = u.ID
-
-	b, err := json.Marshal(u)
-	if err != nil {
-		logrus.Debug(err)
-		return nil
-	}
-
 	userKey := stateKey(fmt.Sprintf(tUser, u.ID))
 	emailKey := stateKey(fmt.Sprintf("/email/%s", u.Email))
+
+	if UniqueNameRegex.MatchString(opts.Name) {
+		u.UniqueName = opts.Name
+		uniqueNameKey := stateKey(fmt.Sprintf("/uniqueName/%s", u.UniqueName))
+		b, err := json.Marshal(u)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := etcdClient.Txn(context.Background()).
+			If(clientv3.Compare(clientv3.Version(uniqueNameKey), "=", 0)).
+			Then(clientv3.OpPut(userKey, string(b)),
+				clientv3.OpPut(emailKey, userKey),
+				clientv3.OpPut(uniqueNameKey, userKey)).
+			Commit()
+		if err != nil {
+			logrus.Debugf("name as uniqueName error: %s, fallback to generate", err)
+		} else if resp.Succeeded {
+			return u, nil
+		}
+	}
+
+	// generate a User UniqueName
+	u.UniqueName = u.ID
 	uniqueNameKey := stateKey(fmt.Sprintf("/uniqueName/%s", u.UniqueName))
-	_, err = etcdClient.Txn(context.Background()).
-		Then(
-			clientv3.OpPut(userKey, string(b)),
+	b, err := json.Marshal(u)
+	if err != nil {
+		return
+	}
+	resp, err := etcdClient.Txn(context.Background()).
+		Then(clientv3.OpPut(userKey, string(b)),
 			clientv3.OpPut(emailKey, userKey),
-			clientv3.OpPut(uniqueNameKey, userKey),
-		).
+			clientv3.OpPut(uniqueNameKey, userKey)).
 		Commit()
 	if err != nil {
-		logrus.Debug(err)
-		return nil
+		return nil, err
 	}
-	return u
+	if !resp.Succeeded {
+		return nil, ErrTryAgainLater
+	}
+	return
 }
 
 func FollowUser(user *ActUser, uniqueName string) error {

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"regexp"
 	"unicode/utf8"
 
 	"github.com/go-chi/chi/v5"
@@ -13,8 +12,6 @@ import (
 	"github.com/rkonfj/lln/state"
 	"github.com/rkonfj/lln/tools"
 )
-
-var uniqueNameRegex = regexp.MustCompile(`^[\p{L}\d_]+$`)
 
 type User struct {
 	state.User
@@ -106,8 +103,8 @@ func checkArgsModifyProfile(r *http.Request) (*state.ModifiableUser, error) {
 		if utf8.RuneCountInString(mu.UniqueName) > 12 {
 			return nil, fmt.Errorf("unique name: maximum 12 unicode characters")
 		}
-		if !uniqueNameRegex.MatchString(mu.UniqueName) {
-			return nil, fmt.Errorf("unique name: not match `%s`", uniqueNameRegex)
+		if !state.UniqueNameRegex.MatchString(mu.UniqueName) {
+			return nil, fmt.Errorf("unique name: not match `%s`", state.UniqueNameRegex)
 		}
 		if tools.Contains(config.Conf.Model.Keywords, mu.UniqueName) {
 			return nil, fmt.Errorf("unique name: %s is a keyword", mu.UniqueName)
