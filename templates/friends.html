@@ -1,18 +1,16 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-    <title>Friend Links</title>
-    {{template "head"}}
+<title>Friend Links</title>
+{{template "head"}}
 </head>
 <body>
     <nav><a href="/explore">Explore</a></nav>
     <ul>
-        {{range $link := .}}
-        <li>
+        {{range $link := .}}<li>
             <a href="{{$link.URL}}">{{$link.Title}}</a>
             <p>{{$link.Desc}}</p>
-        </li>
-        {{end}}
+        </li>{{end}}
     </ul>
 </body>
 </html>

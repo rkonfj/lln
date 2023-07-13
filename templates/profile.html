@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-    <title>{{.profile.Name}} (@{{.profile.UniqueName}})</title>
-    {{template "head"}}
+<title>{{.profile.Name}} (@{{.profile.UniqueName}})</title>
+{{template "head"}}
 </head>
 <body>
     <nav><a href="/explore">Explore</a></nav>
@@ -11,12 +11,11 @@
     <div>Bio: {{.profile.Bio}}</div>
     <h2>Tweets</h2>
     <ul>
-        {{range $status := .list}}
-        <li>
+        {{range $status := .list}}<li>
             <a href="/{{$status.User.UniqueName}}">{{$status.User.Name}} (@{{$status.User.UniqueName}})</a>
-            {{md (index $status.Content 0).Value}} <a href="/{{$status.User.UniqueName}}/status/{{$status.ID}}">Show More</a>
-        </li>
-        {{end}}
+            <time>{{$status.CreateTime}}</time><br />
+            <a class="overview" href="/{{$status.User.UniqueName}}/status/{{$status.ID}}">{{(index $status.Content 0).Value}}</a>
+        </li>{{end}}
     </ul>
 </body>
 </html>

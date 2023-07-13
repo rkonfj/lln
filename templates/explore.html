@@ -1,17 +1,16 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-    <title>Explore</title>
-    {{template "head"}}
+<title>Explore</title>
+{{template "head"}}
 </head>
 <body>
     <ul>
-        {{range $status := .}}
-        <li>
+        {{range $status := .}}<li>
             <a href="/{{$status.User.UniqueName}}">{{$status.User.Name}} (@{{$status.User.UniqueName}})</a>
-            {{md (index $status.Content 0).Value}} <a href="/{{$status.User.UniqueName}}/status/{{$status.ID}}">Show More</a>
-        </li>
-        {{end}}
+            <time>{{$status.CreateTime}}</time><br />
+            <a class="overview" href="/{{$status.User.UniqueName}}/status/{{$status.ID}}">{{(index $status.Content 0).Value}}</a>
+        </li>{{end}}
     </ul>
     <footer>
         <a href="/friends">Friend Links</a>
