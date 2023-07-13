@@ -20,6 +20,7 @@ type User struct {
 	Followings int64 `json:"followings"`
 	Tweets     int64 `json:"tweets"`
 	Disabled   bool  `json:"disabled"`
+	Admin      bool  `json:"admin"`
 }
 
 func profile(w http.ResponseWriter, r *http.Request) {
@@ -47,6 +48,7 @@ func profile(w http.ResponseWriter, r *http.Request) {
 		Followings: u.Followings(),
 		Tweets:     u.Tweets(),
 		Disabled:   u.Disabled(),
+		Admin:      tools.Contains(config.Conf.Admins, u.ID),
 		Following:  u.FollowingBy(user)})
 }
 
