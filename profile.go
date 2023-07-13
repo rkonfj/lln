@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/go-chi/chi/v5"
@@ -115,8 +116,13 @@ func checkArgsModifyProfile(r *http.Request) (*state.ModifiableUser, error) {
 		}
 	}
 
-	if len(mu.Name) > 0 && utf8.RuneCountInString(mu.Name) > 20 {
-		return nil, fmt.Errorf("name: maximum 20 unicode characters")
+	if len(mu.Name) > 0 {
+		if utf8.RuneCountInString(mu.Name) > 20 {
+			return nil, fmt.Errorf("name: maximum 20 unicode characters")
+		}
+		if len(strings.TrimSpace(mu.Name)) == 0 {
+			return nil, fmt.Errorf("name: can not be empty")
+		}
 	}
 
 	if len(mu.Picture) > 0 && len(mu.Picture) > 256 {
