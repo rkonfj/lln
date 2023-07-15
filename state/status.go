@@ -88,7 +88,9 @@ func (s *Status) Delete(uid string) error {
 
 	statusCommentsKey := stateKey(fmt.Sprintf("/comments/status/%s/%s", s.RefStatus, s.ID))
 	statusRecycleKey := stateKey(fmt.Sprintf("/recycle/status/%s", s.ID))
+	statusViewsKey := stateKey(fmt.Sprintf("/views/status/%s", s.ID))
 	statusKey := stateKey(fmt.Sprintf("/status/%s", s.ID))
+
 	userStatusKey := stateKey(fmt.Sprintf("/%s/status/%s", uid, s.ID))
 
 	b, _ := json.Marshal(s)
@@ -98,6 +100,7 @@ func (s *Status) Delete(uid string) error {
 			clientv3.OpDelete(userStatusKey),
 			clientv3.OpDelete(statusProbeKey),
 			clientv3.OpDelete(statusCommentsKey),
+			clientv3.OpDelete(statusViewsKey),
 			clientv3.OpPut(statusRecycleKey, string(b))).Commit()
 	if err != nil {
 		return err

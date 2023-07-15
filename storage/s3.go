@@ -23,9 +23,7 @@ func S3SignRequest(namespace, filepath string) (url string, err error) {
 		return
 	}
 
-	svc := s3.New(sess)
-
-	req, _ := svc.PutObjectRequest(&s3.PutObjectInput{
+	req, _ := s3.New(sess).PutObjectRequest(&s3.PutObjectInput{
 		Bucket: aws.String(config.Conf.Storage.S3.Bucket),
 		Key:    aws.String(fmt.Sprintf("/%s/%s", namespace, filepath)),
 	})
