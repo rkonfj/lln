@@ -76,13 +76,11 @@ func (u *User) Modify(mu ModifiableUser) error {
 		u.Locale = mu.Locale
 	}
 
-	if len(mu.Bio) > 0 {
-		u.Bio = mu.Bio
-	}
-
 	if len(mu.Bg) > 0 {
 		u.Bg = mu.Bg
 	}
+
+	u.Bio = mu.Bio
 
 	b, err := json.Marshal(u)
 	if err != nil {
