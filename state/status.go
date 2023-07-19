@@ -90,7 +90,6 @@ func (s *Status) Delete(uid string) error {
 	statusRecycleKey := stateKey(fmt.Sprintf("/recycle/status/%s", s.ID))
 	statusViewsKey := stateKey(fmt.Sprintf("/views/status/%s", s.ID))
 	statusKey := stateKey(fmt.Sprintf("/status/%s", s.ID))
-
 	userStatusKey := stateKey(fmt.Sprintf("/%s/status/%s", uid, s.ID))
 
 	b, _ := json.Marshal(s)

@@ -20,7 +20,7 @@ func signRequest(w http.ResponseWriter, r *http.Request) {
 		object = base58.Encode(xid.New().Bytes())
 	}
 
-	if state.MediaCountByUser(user) >= config.Conf.Model.Media.CountPerDayLimit {
+	if state.TodayMediaCountByUser(user) >= config.Conf.Model.Media.CountPerDayLimit {
 		w.WriteHeader(http.StatusForbidden)
 		fmt.Fprintf(w, "upload up to %d media files per day", config.Conf.Model.Media.CountPerDayLimit)
 		return
