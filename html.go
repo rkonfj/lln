@@ -150,6 +150,21 @@ func exploreHTML(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func sitemap(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(w, `<?xml version="1.0" encoding="UTF-8"?>`)
+	fmt.Fprintln(w, `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`)
+	ss, _ := state.Recommendations(nil, &tools.PaginationOptions{
+		Size: 1000,
+	})
+	for _, s := range ss {
+		fmt.Fprintln(w, `<url>`)
+		fmt.Fprintf(w, `<loc>https://%s/%s/status/%s</loc>`, r.Host, s.User.UniqueName, s.ID)
+		fmt.Fprintln(w)
+		fmt.Fprintln(w, `</url>`)
+	}
+	fmt.Fprintln(w, `</urlset>`)
+}
+
 func friendsHTML(w http.ResponseWriter, r *http.Request) {
 	settings, err := state.GetSettings()
 	if err != nil {
