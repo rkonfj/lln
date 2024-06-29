@@ -268,8 +268,12 @@ func deleteStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := s.Delete(r.Context().Value(tools.KeySessionUID).(string))
-	if err != nil {
+	uid := r.Context().Value(tools.KeySessionUID).(string)
+	if tools.Contains(config.Conf.Admins, uid) {
+		uid = s.User.ID
+	}
+
+	if err := s.Delete(uid); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 		return
